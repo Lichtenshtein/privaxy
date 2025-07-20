@@ -28,12 +28,6 @@ jobs:
           args: --locked --debug trunk
       - name: Install webassembly rust target
         run: rustup target add wasm32-unknown-unknown
-      - name: Install arm rust target
-        run: rustup target add armv7-unknown-linux-gnueabi 
-      - name: Install arm7 rust target
-        run: rustup target add mipsel-unknown-linux-gnu
-      - name: Install mipsel rust target
-        run: rustup target add arm-unknown-linux-gnueabihf
 
       # Required for tailwindcss
       - name: Install node
@@ -123,16 +117,16 @@ jobs:
 #            os: ubuntu-24.04-arm
 #            rust: stable
 #            target: aarch64-unknown-linux-gnu
+#          - build: linux
+#            os: ubuntu-24.04-arm
+#            rust: stable
+#            target: armv7-unknown-linux-gnueabi
+#          - build: linux
+#            os: ubuntu-24.04-arm
+#            rust: stable
+#            target: arm-unknown-linux-gnueabi
           - build: linux
-            os: ubuntu-24.04-arm
-            rust: stable
-            target: armv7-unknown-linux-gnueabi
-          - build: linux
-            os: ubuntu-24.04-arm
-            rust: stable
-            target: arm-unknown-linux-gnueabi
-          - build: linux
-            os: ubuntu-24.04-arm
+            os: ubuntu-latest
             rust: stable
             target: mipsel-unknown-linux-gnu
     steps:
@@ -182,7 +176,7 @@ jobs:
         with:
           command: build
           working-directory: .
-          args: --release -Zbuild-std --target ${{ matrix.target }} --bin privaxy --target-dir target
+          args: --Zbuild-std --release --target ${{ matrix.target }} --bin privaxy --target-dir target
 #      - name: Build deb
 #        run: cargo install cargo-deb && cargo deb -p privaxy --target ${{ matrix.target }} -o target/${{ matrix.target }}/release
 #      - uses: actions/upload-artifact@v4
