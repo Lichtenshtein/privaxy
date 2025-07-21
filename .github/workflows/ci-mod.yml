@@ -127,7 +127,7 @@ jobs:
 #            target: arm-unknown-linux-gnueabi
           - build: linux
             os: ubuntu-latest
-            rust: stable
+            rust: nightly
             target: mipsel-unknown-linux-gnu
     steps:
       - name: Checkout
@@ -147,6 +147,9 @@ jobs:
           toolchain: ${{ matrix.rust }}
           profile: minimal
           override: true
+
+      - name: component add
+        run: rustup component add rust-src --toolchain nightly
 
       - name: Install rust target
         run: rustup target add ${{ matrix.target }}
@@ -174,9 +177,9 @@ jobs:
       - name: Build server
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: +nightly build
           working-directory: .
-          args: -Zbuild-std --release --target ${{ matrix.target }} --bin privaxy --target-dir target
+          args: --release -Zbuild-std --target ${{ matrix.target }} --bin privaxy --target-dir target
 #      - name: Build deb
 #        run: cargo install cargo-deb && cargo deb -p privaxy --target ${{ matrix.target }} -o target/${{ matrix.target }}/release
 #      - uses: actions/upload-artifact@v4
