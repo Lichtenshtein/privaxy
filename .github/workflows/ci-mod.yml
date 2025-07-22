@@ -123,7 +123,7 @@ jobs:
         working-directory: ./web_frontend
 
       - name: Install Rust
-        run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
+        run: rustup install 1.70
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
