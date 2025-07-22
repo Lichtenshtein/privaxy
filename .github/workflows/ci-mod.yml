@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
  
       - name: Install Rust
-        run: rustup install nightly-2023-06-01
+        run: rustup install nightly-2023-06-01 && rustup target add mipsel-unknown-linux-gnu
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
