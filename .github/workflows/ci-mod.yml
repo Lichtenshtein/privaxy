@@ -35,13 +35,13 @@ jobs:
           - build: linux
             os: ubuntu-latest
             rust: nightly
-            target: mipsel-unknown-linux-gnu
+            target: mipsel-unknown-linux-musl
     steps:
 
       - uses: actions/checkout@v4
  
       - name: Install Rust
-        run: rustup install nightly-2023-06-01 && rustup default nightly && rustup target add mipsel-unknown-linux-gnu
+        run: rustup install nightly-2023-06-01 && rustup default nightly && rustup target add mipsel-unknown-linux-musl
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
