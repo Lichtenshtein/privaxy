@@ -46,4 +46,4 @@ jobs:
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-      - run: cargo test --release -Z build-std --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: cargo test --release --verbose --target ${{ matrix.target }} --bin privaxy
