@@ -152,7 +152,7 @@ jobs:
         run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
-		with:
+        with:
           target: ${{ matrix.target }}
 
 #      - name: Install rust target
