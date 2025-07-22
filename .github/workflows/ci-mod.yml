@@ -46,5 +46,5 @@ jobs:
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-          runner: qemu@9.2
+          qemu: '7.2'
       - run: cargo test --release --verbose --target ${{ matrix.target }} --bin privaxy
