@@ -22,7 +22,7 @@ jobs:
           components: clippy
           override: true
       - name: Install trunk
-        uses: actions-rs/cargo@v3
+        uses: actions-rs/cargo@v2
         with:
           command: install
           args: --locked --debug trunk
@@ -63,7 +63,7 @@ jobs:
           override: true
 
       - name: Run cargo fmt
-        uses: actions-rs/cargo@v3
+        uses: actions-rs/cargo@v2
         with:
           command: fmt
           args: --all -- --check
@@ -171,7 +171,7 @@ jobs:
         working-directory: ./web_frontend
         run: npm i
       - name: Install trunk
-        uses: actions-rs/cargo@v3
+        uses: actions-rs/cargo@v2
         with:
           command: install
           args: --locked --debug trunk
@@ -179,7 +179,7 @@ jobs:
         run: rustup target add wasm32-unknown-unknown && trunk build --release
         working-directory: ./web_frontend
       - name: Build server
-        uses: actions-rs/cargo@v3
+        uses: actions-rs/cargo@v2
         with:
           command: build
           working-directory: .
