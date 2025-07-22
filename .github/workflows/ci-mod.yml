@@ -41,10 +41,10 @@ jobs:
       - uses: actions/checkout@v4
  
       - name: Install Rust
-        run: rustup install nightly-2023-06-01 && rustup default nightly
+        run: rustup install nightly-2023-06-01 && rustup default nightly 
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
           qemu: '7.2'
-      - run: cargo test --release --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
