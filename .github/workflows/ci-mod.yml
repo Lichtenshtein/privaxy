@@ -35,7 +35,7 @@ jobs:
           - build: linux
             os: ubuntu-latest
 #            rust: nightly
-            target: mipsel-unknown-linux-uclib
+            target: mipsel-unknown-linux-gnu
     steps:
 
       - uses: actions/checkout@v4
@@ -46,4 +46,5 @@ jobs:
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
+          runner: qemu@9.2
       - run: cargo test --release --verbose --target ${{ matrix.target }} --bin privaxy
