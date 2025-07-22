@@ -123,7 +123,7 @@ jobs:
         working-directory: ./web_frontend
 
       - name: Install Rust
-        run: rustup install 1.70
+        run: rustup install nightly-2023-06-01
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
