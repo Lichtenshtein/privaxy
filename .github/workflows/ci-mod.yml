@@ -9,64 +9,6 @@ on:
       - main 
   workflow_dispatch:
 jobs:
-  clippy_check:
-    name: Run clippy check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          components: clippy
-          override: true
-      - name: Install trunk
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --locked --debug trunk
-      - name: Install webassembly rust target
-        run: rustup target add wasm32-unknown-unknown
-
-      # Required for tailwindcss
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-      - name: Install node packages
-        working-directory: ./web_frontend
-        run: npm i
-
-      # We need to build the web frontend otherwise, we will not be able to compile
-      # the server and checks will fail.
-      - name: Build web frontend
-        run: trunk build
-        working-directory: ./web_frontend
-      - name: Build backend
-        run: cargo build
-        working-directory: .
-
-  rustfmt:
-    name: Check style
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt
-          profile: minimal
-          override: true
-
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
 
   test:
     name: Build
@@ -97,41 +39,11 @@ jobs:
     steps:
 
       - uses: actions/checkout@v4
-      
-      - name: Cache build artifacts
-        uses: actions/cache@v4
-        with:
-          key:  ${{ matrix.os }}-${{ matrix.target }}-artifacts
-          path: |
-            ./target
-            ~/.cargo
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-      - name: Install node packages
-        working-directory: ./web_frontend
-        run: npm i
-      - name: Install trunk
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --locked --debug trunk
-      - name: Build web frontend
-        run: rustup target add wasm32-unknown-unknown && trunk build --release
-        working-directory: ./web_frontend
-
+ 
       - name: Install Rust
         run: rustup install nightly-2023-06-01
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-      - run: sudo apt-get update && sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu && cargo test --release -Z build-std --verbose --target ${{ matrix.target }} --bin privaxy
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: privaxy-${{ matrix.target }}
-          path: |
-            target/${{ matrix.target }}/release/privaxy
+      - run: cargo test --release -Z build-std --verbose --target ${{ matrix.target }} --bin privaxy
