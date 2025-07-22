@@ -14,15 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v4
         with:
           toolchain: nightly
           components: clippy
           override: true
       - name: Install trunk
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v4
         with:
           command: install
           args: --locked --debug trunk
@@ -31,7 +31,7 @@ jobs:
 
       # Required for tailwindcss
       - name: Install node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
       - name: Install node packages
@@ -52,10 +52,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Install rust
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@v4
         with:
           toolchain: stable
           components: rustfmt
@@ -63,7 +63,7 @@ jobs:
           override: true
 
       - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v4
         with:
           command: fmt
           args: --all -- --check
@@ -131,28 +131,32 @@ jobs:
             target: mipsel-unknown-linux-gnu
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cache build artifacts
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key:  ${{ matrix.os }}-${{ matrix.target }}-artifacts
           path: |
             ./target
             ~/.cargo
 
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          profile: minimal
-          override: true
+#      - name: Install rust
+#        uses: actions-rs/toolchain@v1
+#        with:
+#          toolchain: ${{ matrix.rust }}
+#          profile: minimal
+#          override: true
 
-      - name: component add
-        run: rustup component add rust-src --toolchain nightly
+      - name: Install Rust
+        run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
+      - name: Install cross-compilation tools
+        uses: taiki-e/setup-cross-toolchain-action@v1
+		with:
+          target: ${{ matrix.target }}
 
-      - name: Install rust target
-        run: rustup target add ${{ matrix.target }}
+#      - name: Install rust target
+#        run: rustup target add ${{ matrix.target }}
 #      - name: Install cross build dependencies
 #        if: matrix.target == 'aarch64-unknown-linux-gnu'
 #        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross
@@ -160,14 +164,14 @@ jobs:
         if: matrix.target == 'mipsel-unknown-linux-gnu'
         run: sudo apt-get update && sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu
       - name: Install node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
       - name: Install node packages
         working-directory: ./web_frontend
         run: npm i
       - name: Install trunk
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v4
         with:
           command: install
           args: --locked --debug trunk
@@ -175,11 +179,11 @@ jobs:
         run: rustup target add wasm32-unknown-unknown && trunk build --release
         working-directory: ./web_frontend
       - name: Build server
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@v4
         with:
-          command: +nightly build
+          command: build
           working-directory: .
-          args: --release -Zbuild-std --target ${{ matrix.target }} --bin privaxy --target-dir target
+          args: --release -Z build-std --verbose --target ${{ matrix.target }} --bin privaxy --target-dir target
 #      - name: Build deb
 #        run: cargo install cargo-deb && cargo deb -p privaxy --target ${{ matrix.target }} -o target/${{ matrix.target }}/release
 #      - uses: actions/upload-artifact@v4
