@@ -47,4 +47,4 @@ jobs:
         with:
           target: ${{ matrix.target }}
           qemu: '7.2'
-      - run: sudo apt-get install -y clang musl-tools ring && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: sudo apt-get install -y clang musl-tools && cargo install --force ring && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
