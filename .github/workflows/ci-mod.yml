@@ -34,17 +34,17 @@ jobs:
 #            target: arm-unknown-linux-gnueabi
           - build: linux
             os: ubuntu-latest
-#            rust: nightly
+            rust: nightly
             target: mipsel-unknown-linux-gnu
     steps:
 
       - uses: actions/checkout@v4
  
       - name: Install Rust
-        run: rustup install nightly-2023-06-01 && rustup default nightly 
+        run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
           qemu: '7.2'
-      - run: sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu && cargo add ring && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: sudo apt-get install -y clang musl-tools && cargo add --package ring && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
