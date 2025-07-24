@@ -47,4 +47,4 @@ jobs:
         with:
           target: ${{ matrix.target }}
           qemu: '7.2'
-      - run: env CARGO_LOG=cargo::core::resolver=trace cargo update && sudo apt-get install -y clang musl-tools && cargo tree --workspace --target all --all-features --edges features --invert ring && cargo update --precise && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: cargo tree --workspace --target all --all-features --edges features --invert ring && cargo update --precise ring@0.17.14 && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
