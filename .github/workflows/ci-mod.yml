@@ -47,4 +47,4 @@ jobs:
         with:
           target: ${{ matrix.target }}
           qemu: '7.2'
-      - run: cargo update ring@0.17.14 && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: cargo update ring@0.17.8 && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
