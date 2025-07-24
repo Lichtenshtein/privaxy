@@ -47,4 +47,4 @@ jobs:
         with:
           target: ${{ matrix.target }}
           qemu: '7.2'
-      - run: cargo update && cargo install --force --locked bindgen-cli && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: rustup target add mipsel-unknown-linux-gnu && cargo update && cargo install --force bindgen-cli && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
