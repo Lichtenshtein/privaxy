@@ -41,9 +41,12 @@ jobs:
  
       - name: Install Rust
         run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
+      - name: cargo-deny
+      - uses: EmbarkStudios/cargo-deny-action@v2
+      - run: cargo install cargo-deny && cargo deny init && cargo deny check && cargo deny --exclude -p ring@0.16.20
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
           qemu: '7.2'
-      - run: cargo update --precise -p ring@0.17.14 && cargo install --force bindgen-cli && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: cargo update -p ring --precise 0.17.14 && cargo install --force bindgen-cli && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
