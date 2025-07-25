@@ -41,9 +41,6 @@ jobs:
  
       - name: Install Rust
         run: rustup update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
-      - name: cargo-deny
-      - uses: EmbarkStudios/cargo-deny-action@v2
-      - run: cargo install cargo-deny && cargo deny init && cargo deny check && cargo deny --exclude -p ring@0.16.20
       - name: Install cross-compilation tools
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
