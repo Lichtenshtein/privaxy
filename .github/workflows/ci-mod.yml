@@ -11,10 +11,12 @@ on:
 jobs:
 
   cargo-deny:
+    name: cargo-deny
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: EmbarkStudios/cargo-deny-action@v2
+    - run: cargo install --locked cargo-deny && cargo deny init && cargo deny check
   test:
     name: Build
     runs-on: ${{ matrix.os }}
