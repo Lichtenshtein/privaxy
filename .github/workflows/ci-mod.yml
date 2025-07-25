@@ -46,4 +46,4 @@ jobs:
         with:
           target: ${{ matrix.target }}
           qemu: '7.2'
-      - run: cargo add --package hyper tokio serde_json toml serde tokio-util adblock openssl include_dir chrono rustls futures-util wildmatch http mime_guess tokio-rustls hyper-rustls log env_logger uluru regex lazy_static lol_html crossbeam-channel thiserror url futures dirs async-compression reqwest once_cell serde-tuple-vec-map base64 warp sha2 hex serde_with && cargo update && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: cargo update && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
