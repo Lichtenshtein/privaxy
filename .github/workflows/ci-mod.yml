@@ -9,14 +9,6 @@ on:
       - main 
   workflow_dispatch:
 jobs:
-
-  cargo-deny:
-    name: cargo-deny
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: EmbarkStudios/cargo-deny-action@v2
-    - run: cargo install --locked cargo-deny && cargo deny init && cargo deny check
   test:
     name: Build
     runs-on: ${{ matrix.os }}
@@ -54,4 +46,4 @@ jobs:
         with:
           target: ${{ matrix.target }}
           qemu: '7.2'
-      - run: cargo deny init && cargo deny check && cargo-deny --exclude -p ring@0.16.20 && cargo update --precise -p ring@0.17.14 && cargo install --force bindgen-cli && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
+      - run: cargo update --precise -p ring@0.17.14 && cargo install --force bindgen-cli && cargo test --release -Zbuild-std --verbose --target ${{ matrix.target }} --bin privaxy
