@@ -43,7 +43,7 @@ adblock = { version = "0.10.1" }
 openssl = { version = "0.10.73", features = ["vendored"] }
 include_dir = "0.7.4"
 chrono = { version = "0.4.41", features = ["serde"] }
-rustls = { version = "0.23.29" }
+rustls = { version = "0.21.12" }
 futures-util = "0.3.31"
 wildmatch = "2.4.0"
 http = "0.2.12"
