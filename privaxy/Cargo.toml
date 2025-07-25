@@ -31,3 +31,5 @@ path = "src/server/main.rs"
 name = "privaxy"
 path = "src/server/lib.rs"
 
+[dependencies]
+filterlists-api = { path = "../filterlists-api", features = ["reqwest"] }
