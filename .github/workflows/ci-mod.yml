@@ -168,9 +168,6 @@ jobs:
       - name: Build web frontend
         run: rustup target add wasm32-unknown-unknown && trunk build --release
         working-directory: ./web_frontend
-      - name: Build tree
-        run: cargo tree --workspace --target all --all-features --edges features --invert ring@0.16.20
-        working-directory: ./web_frontend
       - name: Build server
         uses: actions-rs/cargo@v1
         with:
