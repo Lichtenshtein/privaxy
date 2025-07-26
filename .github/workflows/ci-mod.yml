@@ -168,6 +168,8 @@ jobs:
       - name: Build web frontend
         run: rustup target add wasm32-unknown-unknown && trunk build --release
         working-directory: ./web_frontend
+      - name: upgrade ring
+        run: cargo install cargo-edit && cargo upgrade -i -p ring@0.17.14
       - name: Build server
         uses: actions-rs/cargo@v1
         with:
