@@ -170,7 +170,7 @@ jobs:
         working-directory: ./web_frontend
       - name: test
         working-directory: .
-        run: cargo update --locked --precise -p ring@0.17.14
+        run: cargo update -p ring --precise 0.17.14 --locked
       - name: Build server
         uses: actions-rs/cargo@v1
         with:
