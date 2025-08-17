@@ -31,10 +31,10 @@ pub(crate) fn get_frontend(
     configuration_updater_sender: &Sender<Configuration>,
     configuration_save_lock: &Arc<tokio::sync::Mutex<()>>,
     local_exclusions_store: &LocalExclusionStore,
+    tls: bool,
     notify_reload: Arc<Notify>,
-) -> BoxedFilter<(impl warp::Reply,)> {
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let static_files_routes = create_static_routes();
-
     let cors = warp::cors()
         .allow_any_origin()
         .allow_methods(vec!["GET", "PUT", "POST", "DELETE"])
@@ -43,7 +43,6 @@ pub(crate) fn get_frontend(
             http::header::CONTENT_LENGTH,
             http::header::DATE,
         ]);
-
     let http_client = reqwest::Client::new();
 
     let api_routes = create_api_routes(
@@ -56,8 +55,22 @@ pub(crate) fn get_frontend(
         http_client,
         notify_reload,
     );
-
-    api_routes.or(static_files_routes).with(cors).boxed()
+    let routes = api_routes.or(static_files_routes);
+    let mut headers = warp::http::HeaderMap::new();
+    if tls {
+        headers.insert(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains".parse().unwrap(),
+        );
+        headers.insert(
+            "Content-Security-Policy",
+            "upgrade-insecure-requests".parse().unwrap(),
+        );
+    };
+    routes
+        .with(cors)
+        .with(warp::reply::with::headers(headers))
+        .boxed()
 }
 
 fn create_static_routes() -> BoxedFilter<(impl warp::Reply,)> {

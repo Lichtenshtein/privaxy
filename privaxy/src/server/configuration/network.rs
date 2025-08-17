@@ -2,7 +2,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use std::str::FromStr;
-use std::time::{SystemTime,UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 use tokio::fs;
 
@@ -231,24 +231,27 @@ impl NetworkConfig {
         ca_key: PKey<Private>,
     ) -> ConfigurationResult<X509> {
         if let Ok(mut cert) = self.get_tls_cert().await {
-            let curtime = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64;
+            let curtime = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64;
             let current_asn1_time = Asn1Time::from_unix(curtime)?;
             let expiry = cert.not_after();
             match current_asn1_time.compare(expiry).unwrap() {
                 std::cmp::Ordering::Greater | std::cmp::Ordering::Equal => {
-                        let tls_key = self.get_tls_key().await.unwrap();
-                        if ca_cert.verify(&tls_key).unwrap() {
-                            log::info!("Current TLS certificate has expired, generating new one.");
-                            cert =  self.gen_self_signed_tls_cert(ca_cert, ca_key).await.unwrap();
-                        }
-                        else {
-                            log::warn!("TLS certificate is expired.");
-                        };
-                        Ok(cert)
-                }
-                std::cmp::Ordering::Less  => {
+                    let tls_key = self.get_tls_key().await.unwrap();
+                    if ca_cert.verify(&tls_key).unwrap() {
+                        log::info!("Current TLS certificate has expired, generating new one.");
+                        cert = self
+                            .gen_self_signed_tls_cert(ca_cert, ca_key)
+                            .await
+                            .unwrap();
+                    } else {
+                        log::warn!("TLS certificate is expired.");
+                    };
                     Ok(cert)
                 }
+                std::cmp::Ordering::Less => Ok(cert),
             }
         } else {
             self.gen_self_signed_tls_cert(ca_cert, ca_key).await
