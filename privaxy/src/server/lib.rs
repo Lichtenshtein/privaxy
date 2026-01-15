@@ -19,7 +19,6 @@ use std::time::Duration;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast;
 use tokio::sync::Notify;
-
 pub mod blocker;
 mod blocker_utils;
 mod ca;
@@ -244,6 +243,7 @@ async fn privaxy_frontend(
     configuration_save_lock: Arc<tokio::sync::Mutex<()>>,
     notify_reload: Arc<tokio::sync::Notify>,
 ) {
+    let config = read_configuration(&configuration_save_lock).await;
     let frontend = web_gui::get_frontend(
         broadcast_tx.clone(),
         statistics.clone(),
@@ -251,10 +251,10 @@ async fn privaxy_frontend(
         &configuration_updater_tx,
         &configuration_save_lock,
         &local_exclusion_store,
+        config.network.tls,
         notify_reload.clone(),
     );
     let frontend_server = warp::serve(frontend);
-    let config = read_configuration(&configuration_save_lock).await;
     let ip = env_or_config_ip(&config.network).await;
     let web_api_server_addr = SocketAddr::from((ip, config.network.web_port));
     if config.network.tls {
