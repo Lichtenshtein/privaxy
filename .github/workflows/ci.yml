@@ -37,8 +37,8 @@ jobs:
 
       - name: Install node
         uses: actions/setup-node@v4
-        with:
-          node-version: 18
+        with: 
+          node-version: 22  # LTS, supported until Oct 2027
           cache: 'npm'
           cache-dependency-path: 'web_frontend/package-lock.json'
       
