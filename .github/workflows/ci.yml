@@ -121,6 +121,6 @@ jobs:
           # platforms: linux/arm64/v8,linux/amd64
           platforms: linux/mipsel
           push: ${{ github.ref == 'refs/heads/main' }}
-          tags: ghcr.io/lichtenshtein/privaxy: ${{ env.IMAGE_TAG }}
+          # tags: ghcr.io/lichtenshtein/privaxy: ${{ env.IMAGE_TAG }}
           cache-from: type=gha
           cache-to:  type=gha,mode=max
