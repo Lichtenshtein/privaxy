@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -qy \
     clang \
     libssl-dev \
     git && \
+    gcc-mipsel-linux-gnu \
+    g++-mipsel-linux-gnu \
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -qy nodejs
 
@@ -31,7 +33,7 @@ RUN npm ci && trunk build --release
 # Build backend
 WORKDIR /app
 COPY .  .  
-RUN cargo build --release
+RUN cargo build --release -Zbuild-std --target mipsel-unknown-linux-gnu --bin privaxy
 
 FROM gcr.io/distroless/cc-debian13:nonroot
 

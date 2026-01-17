@@ -1,11 +1,11 @@
 name: CI
 on:
-  push:
-    branches: 
-      - main
-  pull_request:
-    branches: 
-      - main
+#  push:
+#    branches: 
+#      - main
+#  pull_request:
+#    branches: 
+#      - main
   workflow_dispatch:
 
 jobs:
@@ -118,8 +118,9 @@ jobs:
         uses: docker/build-push-action@v5
         with: 
           context: .
-          platforms: linux/arm64/v8,linux/amd64
+          # platforms: linux/arm64/v8,linux/amd64
+          platforms: linux/mipsle
           push: ${{ github.ref == 'refs/heads/main' }}
-          tags: ghcr.io/joshrmcdaniel/privaxy: ${{ env.IMAGE_TAG }}
+          tags: ghcr.io/lichtenshtein/privaxy: ${{ env.IMAGE_TAG }}
           cache-from: type=gha
           cache-to:  type=gha,mode=max
