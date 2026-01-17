@@ -2,9 +2,9 @@
 //! Contains methods useful for building `Resource` descriptors from resources directly from files
 //! in the uBlock Origin repository.
 use adblock::resources::{MimeType, PermissionMask, Resource, ResourceType};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serde::Deserialize;
 
 static TOP_COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^/\*[\S\s]+?\n\*/\s*"#).unwrap());
 static NON_EMPTY_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"\S"#).unwrap());
@@ -23,11 +23,10 @@ pub struct ResourceProperties {
     pub alias: Vec<String>,
     pub data: Option<String>,
 }
-use base64::{engine::general_purpose, Engine};
 
 /// The deserializable represenation of the `alias` field of a resource's properties, which can
 /// either be a single string or a list of strings.
-#[derive(Deserialize)]
+#[derive(serde::Deserialize)]
 #[serde(untagged)]
 enum ResourceAliasField {
     SingleString(String),
@@ -60,6 +59,7 @@ type JsResourceEntry = (String, JsResourceProperties);
 const REDIRECTABLE_RESOURCES_DECLARATION: &str = "export default new Map([";
 //  ]);
 static MAP_END_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^\s*\]\s*\)"#).unwrap());
+
 static TRAILING_COMMA_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#",([\],\}])"#).unwrap());
 static UNQUOTED_FIELD_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"([\{,])([a-zA-Z][a-zA-Z0-9_]*):"#).unwrap());
@@ -80,9 +80,15 @@ pub fn read_redirectable_resource_mapping(mapfile_data: &str) -> Vec<ResourcePro
         .skip_while(|line| *line != REDIRECTABLE_RESOURCES_DECLARATION)
         .take_while(|line| !MAP_END_RE.is_match(line))
         // Strip any trailing comments from each line.
-        .map(|line| line.split("//").next().unwrap_or("").trim())
+        .map(|line| {
+            if let Some(i) = line.find("//") {
+                &line[..i]
+            } else {
+                line
+            }
+        })
         // Remove all newlines from the entire string.
-        .collect::<String>();
+        .fold(String::new(), |s, line| s + line);
 
     // Add back the final square brace that was omitted above as part of MAP_END_RE.
     map.push(']');
@@ -96,11 +102,16 @@ pub fn read_redirectable_resource_mapping(mapfile_data: &str) -> Vec<ResourcePro
     map.retain(|c| !c.is_whitespace());
 
     // Replace all matches for `,]` or `,}` with `]` or `}`, respectively.
-    map = TRAILING_COMMA_RE.replace_all(&map, "$1").to_string();
+    map = TRAILING_COMMA_RE
+        .replace_all(&map, |caps: &regex::Captures| caps[1].to_string())
+        .to_string();
+
     // Replace all property keys directly preceded by a `{` or a `,` and followed by a `:` with
     // double-quoted versions.
     map = UNQUOTED_FIELD_RE
-        .replace_all(&map, r#"$1"$2":"#)
+        .replace_all(&map, |caps: &regex::Captures| {
+            format!("{}\"{}\":", &caps[1], &caps[2])
+        })
         .to_string();
 
     // It *should* be valid JSON now, so parse it with serde_json.
@@ -146,15 +157,18 @@ pub fn read_template_resources(scriptlets_data: &str) -> Vec<Resource> {
         }
 
         if let Some(stripped) = line.strip_prefix("/// ") {
-            let mut line_parts = stripped.split_whitespace();
-            let prop = line_parts.next().expect("Detail line has property name");
-            let value = line_parts.next().expect("Detail line has property value");
-            details.entry(prop).or_default().push(value);
+            let mut line = stripped.split_whitespace();
+            let prop = line.next().expect("Detail line has property name");
+            let value = line.next().expect("Detail line has property value");
+            details
+                .entry(prop)
+                .and_modify(|v| v.push(value))
+                .or_insert_with(|| vec![value]);
             continue;
         }
 
         if NON_EMPTY_LINE_RE.is_match(line) {
-            script.push_str(line.trim());
+            script += line.trim();
             script.push('\n');
             continue;
         }
@@ -168,14 +182,12 @@ pub fn read_template_resources(scriptlets_data: &str) -> Vec<Resource> {
         resources.push(Resource {
             name: name.expect("Resource name must be specified").to_owned(),
             aliases: details
-                .remove("alias")
-                .unwrap_or_default()
-                .into_iter()
-                .map(ToOwned::to_owned)
-                .collect(),
+                .get("alias")
+                .map(|aliases| aliases.iter().map(|alias| alias.to_string()).collect())
+                .unwrap_or_default(),
             kind,
-            content: general_purpose::STANDARD.encode(&script),
-            dependencies: Vec::new(),
+            content: BASE64.encode(&script),
+            dependencies: vec![],
             permission: PermissionMask::default(),
         });
 
@@ -193,15 +205,19 @@ pub fn build_resource_from_file_contents(
     resource_contents: &[u8],
     resource_info: &ResourceProperties,
 ) -> Resource {
-    let name = resource_info.name.clone();
-    let aliases = resource_info.alias.clone();
-    let mimetype = MimeType::from_extension(&resource_info.name);
+    let name = resource_info.name.to_owned();
+    let aliases = resource_info
+        .alias
+        .iter()
+        .map(|alias| alias.to_string())
+        .collect();
+    let mimetype = MimeType::from_extension(&resource_info.name[..]);
     let content = match mimetype {
         MimeType::ApplicationJavascript | MimeType::TextHtml | MimeType::TextPlain => {
             let utf8string = std::str::from_utf8(resource_contents).unwrap();
-            general_purpose::STANDARD.encode(utf8string.replace('\r', ""))
+            BASE64.encode(&utf8string.replace('\r', ""))
         }
-        _ => general_purpose::STANDARD.encode(resource_contents),
+        _ => BASE64.encode(resource_contents),
     };
 
     Resource {
@@ -209,7 +225,7 @@ pub fn build_resource_from_file_contents(
         aliases,
         kind: ResourceType::Mime(mimetype),
         content,
-        dependencies: Vec::new(),
+        dependencies: vec![],
         permission: PermissionMask::default(),
     }
 }

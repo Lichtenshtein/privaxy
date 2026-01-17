@@ -1,0 +1,34 @@
+name: Update filters
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  update-filters:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v3
+
+      - name: "Setup python"
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: "Install dependencies"
+        working-directory: "./filters"
+        run: python3 -m pip install -r requirements.txt
+
+      - name: Update filters
+        working-directory: "./filters"
+        run: rm registry/.gitkeep && python3 main.py
+
+      - name: Publish on cloudflare pages
+        uses: cloudflare/wrangler-action@2.0.0
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages publish filters/registry --project-name=privaxy --branch=production --commit-dirty=true

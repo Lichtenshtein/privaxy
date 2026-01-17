@@ -11,7 +11,7 @@ use openssl::x509::X509;
 const ORGANIZATION_NAME: &str = "Privaxy";
 
 pub fn make_ca_certificate() -> (X509, PKey<Private>) {
-    let rsa: Rsa<Private> = Rsa::generate(2048).unwrap();
+    let rsa = Rsa::generate(2048).unwrap();
     let key_pair = PKey::from_rsa(rsa).unwrap();
 
     let mut x509_name = X509NameBuilder::new().unwrap();

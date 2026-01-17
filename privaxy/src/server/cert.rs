@@ -13,8 +13,8 @@ use openssl::{
         X509NameBuilder, X509Ref, X509Req, X509ReqBuilder, X509,
     },
 };
-use rustls::{Certificate, PrivateKey, ServerConfig};
-use std::time::{SystemTime, UNIX_EPOCH};
+use rustls::ServerConfig;
+use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 use std::{str::FromStr, sync::Arc};
 use tokio::sync::Mutex;
 use uluru::LRUCache;
@@ -24,11 +24,11 @@ const MAX_CACHED_CERTIFICATES: usize = 1_000;
 #[derive(Clone)]
 pub struct SignedWithCaCert {
     authority: Authority,
-    pub server_configuration: ServerConfig,
+    pub server_configuration: Arc<ServerConfig>,
 }
 
 impl SignedWithCaCert {
-    pub(super) fn new(
+    fn new(
         authority: Authority,
         private_key: PKey<Private>,
         ca_certificate: X509,
@@ -37,23 +37,25 @@ impl SignedWithCaCert {
         let x509 =
             Self::build_ca_signed_cert(&ca_certificate, &ca_private_key, &authority, &private_key);
 
-        let certs = vec![
-            Certificate(x509.to_der().unwrap()),
-            Certificate(ca_certificate.to_der().unwrap()),
+        let cert_der = x509.to_der().unwrap();
+        let ca_cert_der = ca_certificate.to_der().unwrap();
+        let key_der = private_key.private_key_to_der().unwrap();
+
+        let certs: Vec<CertificateDer<'static>> = vec![
+            CertificateDer::from(cert_der),
+            CertificateDer::from(ca_cert_der),
         ];
 
+        let private_key = PrivateKeyDer::try_from(key_der).unwrap();
+
         let server_configuration = ServerConfig::builder()
-            .with_safe_default_cipher_suites()
-            .with_safe_default_kx_groups()
-            .with_safe_default_protocol_versions()
-            .unwrap()
             .with_no_client_auth()
-            .with_single_cert(certs, PrivateKey(private_key.private_key_to_der().unwrap()))
+            .with_single_cert(certs, private_key)
             .unwrap();
 
         Self {
             authority,
-            server_configuration,
+            server_configuration: Arc::new(server_configuration),
         }
     }
 
@@ -109,14 +111,7 @@ impl SignedWithCaCert {
             .unwrap();
         cert_builder.set_pubkey(private_key).unwrap();
 
-        let not_before = {
-            let current_time = SystemTime::now();
-            let since_epoch = current_time
-                .duration_since(UNIX_EPOCH)
-                .expect("Time went backwards");
-            // patch NotValidBefore
-            Asn1Time::from_unix(since_epoch.as_secs() as i64 - 60).unwrap()
-        };
+        let not_before = Asn1Time::days_from_now(0).unwrap();
         cert_builder.set_not_before(&not_before).unwrap();
 
         let not_after = Asn1Time::days_from_now(365).unwrap();
@@ -139,6 +134,8 @@ impl SignedWithCaCert {
             .unwrap();
 
         let subject_alternative_name = match std::net::IpAddr::from_str(authority.host()) {
+            // If we are able to parse the authority as an ip address, let's build an "IP" field instead
+            // of a "DNS" one.
             Ok(_ip_addr) => {
                 let mut san = SubjectAlternativeName::new();
                 san.ip(authority.host());
@@ -194,7 +191,7 @@ impl CertCache {
         Self {
             cache: Arc::new(Mutex::new(LRUCache::default())),
             private_key: {
-                let rsa: Rsa<Private> = Rsa::generate(2048).unwrap();
+                let rsa = Rsa::generate(2048).unwrap();
                 PKey::from_rsa(rsa).unwrap()
             },
             ca_certificate,
