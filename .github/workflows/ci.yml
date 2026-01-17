@@ -119,7 +119,7 @@ jobs:
         with: 
           context: .
           # platforms: linux/arm64/v8,linux/amd64
-          platforms: linux/mipsle
+          platforms: linux/mipsel
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: ghcr.io/lichtenshtein/privaxy: ${{ env.IMAGE_TAG }}
           cache-from: type=gha
