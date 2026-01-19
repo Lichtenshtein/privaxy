@@ -51,27 +51,46 @@ impl Component for SaveButton {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let mut save_button_classes = classes!(
-            BASE_BUTTON_CSS,
+            "inline-flex",
+            "items-center",
+            "justify-center",
             "focus:ring-blue-500",
             "bg-blue-600",
             "hover:bg-blue-700",
+            "px-4",
+            "py-2",
+            "border",
+            "transition",
+            "ease-in-out",
+            "duration-150",
+            "border-transparent",
+            "text-sm",
+            "text-sm",
+            "font-medium",
+            "rounded-md",
+            "shadow-sm",
+            "text-white",
+            "focus:outline-none",
+            "focus:ring-2",
+            "focus:ring-offset-2",
+            "focus:ring-offset-gray-100",
         );
-    
+
         let properties = ctx.props();
-    
+
         if properties.state == SaveButtonState::Disabled
             || properties.state == SaveButtonState::Loading
         {
             save_button_classes.push("opacity-50");
             save_button_classes.push("cursor-not-allowed");
         }
-    
+
         let button_text = if properties.state == SaveButtonState::Loading {
             "Loading..."
         } else {
             "Save changes"
         };
-    
+
         html! {
             <button onclick={properties.onclick.clone()} type="button" class={classes!(save_button_classes, "mt-5" )}>
                 <svg xmlns="http://www.w3.org/2000/svg" class="-ml-0.5 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

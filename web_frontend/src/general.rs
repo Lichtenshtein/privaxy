@@ -102,7 +102,7 @@ impl NetworkSettings {
         match req.send().await {
             Ok(resp) => {
                 if resp.ok() {
-                    Ok(());
+                    return Ok(());
                 } else {
                     log::error!("Failed to save network config");
                     return Err(resp.json::<ApiError>().await.unwrap());

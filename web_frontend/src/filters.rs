@@ -211,7 +211,7 @@ impl Component for AddFilterComponent {
             .collect();
 
         let url = self.url.clone();
-        let category = self.category();
+        let category = self.category.clone();
         let title = self.title.clone();
 
         // <button onclick={self.link.callback(|_| AddFilterMessage::Open)} type="button" class="mt-5 button-base button-green">
