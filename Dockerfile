@@ -1,8 +1,10 @@
 # syntax=docker/dockerfile:1
 
+ARG TARGETPLATFORM
 ARG PRIVAXY_BASE_PATH="/conf"
 
-FROM rust:1 AS builder
+# FROM rust:1 AS builder
+FROM --platform=$TARGETPLATFORM debian:bookworm-slim
 WORKDIR /app
 
 RUN rustup target add wasm32-unknown-unknown && \
@@ -17,6 +19,7 @@ RUN apt-get update && apt-get install -qy \
     git && \
     gcc-mipsel-linux-gnu \
     g++-mipsel-linux-gnu \
+    libc6-dev-mipsel-cross \
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -qy nodejs
 

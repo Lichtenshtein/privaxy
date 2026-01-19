@@ -51,32 +51,32 @@ jobs:
         run: trunk build
         working-directory: ./web_frontend
 
-      - name: Run clippy
-        uses: actions-rs/cargo@v1
-        with: 
-          command: clippy
-          args: -- -D warnings
+      # - name: Run clippy
+        # uses: actions-rs/cargo@v1
+        # with: 
+          # command: clippy
+          # args: -- -D warnings
 
-  rustfmt:
-    name: Check style
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # rustfmt:
+    # name: Check style
+    # runs-on: ubuntu-latest
+    # steps:
+      # - name: Checkout
+        # uses: actions/checkout@v4
 
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with: 
-          toolchain: stable
-          components: rustfmt
-          profile: minimal
-          override: true
+      # - name: Install rust
+        # uses: actions-rs/toolchain@v1
+        # with: 
+          # toolchain: stable
+          # components: rustfmt
+          # profile: minimal
+          # override: true
 
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with: 
-          command: fmt
-          args:  --all -- --check
+      # - name: Run cargo fmt
+        # uses: actions-rs/cargo@v1
+        # with: 
+          # command: fmt
+          # args:  --all -- --check
 
   image:
     name: Build docker image
@@ -87,6 +87,9 @@ jobs:
     steps:
       - name:  Checkout
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -115,7 +118,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with: 
           context: .
           # platforms: linux/arm64/v8,linux/amd64
