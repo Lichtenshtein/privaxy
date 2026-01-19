@@ -4,7 +4,7 @@ ARG TARGETPLATFORM
 ARG PRIVAXY_BASE_PATH="/conf"
 
 # FROM rust:1 AS builder
-FROM --platform=$TARGETPLATFORM debian:bookworm-slim
+# FROM --platform=$TARGETPLATFORM debian:bookworm-slim
 WORKDIR /app
 
 RUN rustup target add wasm32-unknown-unknown && \
@@ -38,8 +38,8 @@ WORKDIR /app
 COPY .  .  
 RUN cargo build --release -Zbuild-std --target mipsel-unknown-linux-gnu --bin privaxy
 
-# FROM gcr.io/lichtenshtein/cc-debian13:nonroot
-FROM gcr.io/distroless/cc-debian13:nonroot
+FROM gcr.io/lichtenshtein/cc-debian13:nonroot
+# FROM gcr.io/distroless/cc-debian13:nonroot
 
 COPY --from=builder /app/target/release/privaxy /app/privaxy
 
