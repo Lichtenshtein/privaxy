@@ -1,9 +1,3 @@
-error: constant `BASE_BUTTON_CSS` is never used
- --> web_frontend/src/save_button.rs:6:11
-  |
-6 | pub const BASE_BUTTON_CSS: [&'static str; 20] = [
-  |           ^^^^^^^^^^^^^^^
-
 #![allow(clippy::unnecessary_operation)]
 #![allow(clippy::let_unit_value)]
 use web_sys::MouseEvent;
