@@ -3,7 +3,7 @@
 ARG TARGETPLATFORM
 ARG PRIVAXY_BASE_PATH="/conf"
 
-# FROM rust:1 AS builder
+FROM rust:1 AS builder
 # FROM --platform=$TARGETPLATFORM debian:bookworm-slim
 WORKDIR /app
 
