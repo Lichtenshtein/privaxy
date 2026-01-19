@@ -17,8 +17,7 @@ RUN apt-get update && apt-get install -qy \
 
 # 1. Setup Rust for MIPS cross-compilation
 # MIPS is a Tier 3 target; -Zbuild-std is required for the standard library
-RUN rustup toolchain install nightly && \
-    rustup component add rust-src --toolchain nightly && \
+RUN rustup component add rust-src --toolchain nightly && \
     rustup target add wasm32-unknown-unknown
 
 # Set the linker for the mipsel target
@@ -40,7 +39,7 @@ RUN npm ci && trunk build --release
 # 4. Build backend binary for mipsel
 WORKDIR /app
 COPY . .  
-RUN cargo +nightly build --release -Zbuild-std --target mipsel-unknown-linux-gnu --bin privaxy
+RUN cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu --bin privaxy
 
 # --- Runtime Stage ---
 # Use a base image that supports linux/mipsel. Debian 13 (Trixie) supports mipsel as of 2026.

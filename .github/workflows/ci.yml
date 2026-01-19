@@ -10,12 +10,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Replaced actions-rs/toolchain with dtolnay/rust-toolchain (industry standard in 2026)
       - name: Install Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: clippy, rust-src
-          targets: wasm32-unknown-unknown, mipsel-unknown-linux-gnu
+          components: clippy, rust-src # Added rust-src here
+          targets: wasm32-unknown-unknown 
 
       - name: Cache Rust
         uses: swatinem/rust-cache@v2
