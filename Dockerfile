@@ -35,6 +35,7 @@ WORKDIR /app
 COPY .  .  
 RUN cargo build --release -Zbuild-std --target mipsel-unknown-linux-gnu --bin privaxy
 
+# FROM gcr.io/lichtenshtein/cc-debian13:nonroot
 FROM gcr.io/distroless/cc-debian13:nonroot
 
 COPY --from=builder /app/target/release/privaxy /app/privaxy
