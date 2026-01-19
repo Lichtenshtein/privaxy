@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use futures::future::{AbortHandle, Abortable};
 use futures::StreamExt;
 use reqwasm::websocket::futures::WebSocket;

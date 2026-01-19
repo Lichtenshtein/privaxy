@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use crate::button::ButtonState;
 use crate::filterlists::SearchFilterList;
 use crate::{save_button, submit_banner};

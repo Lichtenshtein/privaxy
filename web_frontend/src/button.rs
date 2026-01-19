@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use web_sys::MouseEvent;
 use yew::{classes, html, Callback, Classes, Component, Context, Html, Properties};
 

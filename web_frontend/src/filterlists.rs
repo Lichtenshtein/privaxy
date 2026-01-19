@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use crate::button;
 use crate::button::{ButtonColor, ButtonState, PrivaxyButton};
 use crate::filters::{AddFilterRequest, Filter, FilterConfiguration, FilterGroup};

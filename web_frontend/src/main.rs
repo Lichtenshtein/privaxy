@@ -1,3 +1,6 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
+
 use serde::Deserialize;
 use yew::functional::*;
 use yew::prelude::*;

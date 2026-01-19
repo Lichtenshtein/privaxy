@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use serde::Serialize;
 use std::{
     collections::HashMap,

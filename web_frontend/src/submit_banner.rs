@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use gloo_timers::callback::Timeout;
 use yew::{classes, html, Callback, Component, Context, Html, Properties};
 pub struct SubmitBanner {

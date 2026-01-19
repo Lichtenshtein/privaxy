@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use reqwasm::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::{classes, html, Component, Context, Html};

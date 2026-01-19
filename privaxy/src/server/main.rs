@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use privaxy::start_privaxy;
 use std::time::Duration;
 

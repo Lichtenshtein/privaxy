@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use http::uri::Authority;
 use openssl::{
     asn1::Asn1Time,

@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use crate::save_button;
 use crate::submit_banner;
 use crate::success_banner;

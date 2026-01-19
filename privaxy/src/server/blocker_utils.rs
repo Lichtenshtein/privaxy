@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 //! Implementation of following utils are derived from https://raw.githubusercontent.com/brave/adblock-rust/master/src/resources/resource_assembler.rs
 //! Contains methods useful for building `Resource` descriptors from resources directly from files
 //! in the uBlock Origin repository.

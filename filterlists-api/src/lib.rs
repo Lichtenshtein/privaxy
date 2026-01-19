@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 #[cfg(all(feature = "reqwasm", feature = "reqwest"))]
 compile_error!("feature \"reqwasm\" and \"reqwest\" cannot be enabled at the same time");
 

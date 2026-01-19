@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use crate::blocker_utils::{
     build_resource_from_file_contents, read_redirectable_resource_mapping, read_template_resources,
 };

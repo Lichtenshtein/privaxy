@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use crate::blocking_enabled::BlockingEnabled;
 use futures::future::{AbortHandle, Abortable};
 use futures::StreamExt;

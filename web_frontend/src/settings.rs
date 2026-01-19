@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_operation)]
+#![allow(clippy::let_unit_value)]
 use crate::filters::Filters;
 use crate::general::GeneralSettings;
 use crate::set_title;
