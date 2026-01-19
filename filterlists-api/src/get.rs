@@ -42,7 +42,7 @@ if_wasm! {
 }
 
 if_reqwest! {
-    use reqwest;
+    // use reqwest;
     use serde::de::DeserializeOwned;
 
     pub(crate) async fn _get<T>(url: &str) -> Result<T, FilterListError>
