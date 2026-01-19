@@ -211,7 +211,7 @@ impl Component for AddFilterComponent {
             .collect();
 
         let url = self.url.clone();
-        let category = self.category.clone();
+        let category = self.category();
         let title = self.title.clone();
 
         // <button onclick={self.link.callback(|_| AddFilterMessage::Open)} type="button" class="mt-5 button-base button-green">
@@ -271,7 +271,7 @@ impl Component for AddFilterComponent {
                                         />
                                     </div>
                                     <div class="flex space-x-4">
-                                        <button onclick={_ctx.link().callback(move |_| AddFilterMessage::Save(url.clone(), title.clone(), category.clone()))} class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded z-60">{"Save"}</button>
+                                        <button onclick={_ctx.link().callback(move |_| AddFilterMessage::Save(url.clone(), title.clone(), category()))} class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded z-60">{"Save"}</button>
                                         <button onclick={_ctx.link().callback(|_| AddFilterMessage::Close)} class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded z-60">{"Cancel"}</button>
                                     </div>
                                 </div>
@@ -351,7 +351,7 @@ impl Filters {
         self.filter_configuration
             .as_ref()
             .unwrap()
-            .into_iter()
+            .iter()
             .any(|f| f.file_name == filter.file_name)
     }
 }
@@ -418,41 +418,34 @@ impl Component for Filters {
                         file_name: filter.file_name.clone(),
                     })
                     .collect::<Vec<_>>();
-
+            
                 let request = Request::put("/api/filters")
                     .header("Content-Type", "application/json")
                     .body(serde_json::to_string(&request_body).unwrap());
-
+            
                 let callback = ctx.link().callback(|message: Message| message);
-
+            
                 spawn_local(async move {
-                    match request.send().await {
-                        Ok(response) => {
-                            if response.ok() {
-                                callback.emit(Message::ChangesSaved);
-
-                                return;
-                            }
+                    if let Ok(response) = request.send().await {
+                        if response.ok() {
+                            callback.emit(Message::ChangesSaved);
                         }
-                        Err(_) => {}
                     }
                 });
-
+            
                 log::info!("Save")
             }
             Message::UpdateFilterSelection((filter_name, enabled)) => {
                 self.changes_saved = false;
-
-                self.filter_configuration
-                    .as_mut()
-                    .unwrap()
-                    .iter_mut()
-                    .find(|filter| filter.file_name == filter_name)
-                    .and_then(|filter| {
+            
+                    if let Some(filter) = self.filter_configuration
+                        .as_mut()
+                        .unwrap()
+                        .iter_mut()
+                        .find(|filter| filter.file_name == filter_name)
+                    {
                         filter.enabled = enabled;
-
-                        Some(filter)
-                    });
+                    }
             }
             Message::ChangesSaved => {
                 self.changes_saved = true;

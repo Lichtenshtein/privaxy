@@ -64,7 +64,7 @@ impl Component for SettingsTextarea {
 
                 let request = Request::put(&ctx.props().resource_url)
                     .header("Content-Type", "application/json")
-                    .body(&serde_json::to_string(&self.input_data).unwrap());
+                    .body(serde_json::to_string(&self.input_data).unwrap());
 
                 spawn_local(async move {
                     if let Ok(response) = request.send().await {

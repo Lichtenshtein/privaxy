@@ -102,7 +102,7 @@ impl NetworkSettings {
         match req.send().await {
             Ok(resp) => {
                 if resp.ok() {
-                    return Ok(());
+                    Ok(());
                 } else {
                     log::error!("Failed to save network config");
                     return Err(resp.json::<ApiError>().await.unwrap());
@@ -141,14 +141,14 @@ impl GeneralSettings {
     }
 
     fn config_has_changed(&self) -> bool {
-        let net_changed = match &self.network_settings {
-            None => return false,
+        match &self.network_settings {
+            None => false,
             Some(network_settings) => {
                 network_settings.current_config != network_settings.remote_config
             }
-        };
-        net_changed
+        }
     }
+    
     fn validate(&self) -> bool {
         match &self.network_settings {
             None => false,
