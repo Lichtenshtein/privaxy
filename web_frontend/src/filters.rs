@@ -271,7 +271,7 @@ impl Component for AddFilterComponent {
                                         />
                                     </div>
                                     <div class="flex space-x-4">
-                                        <button onclick={_ctx.link().callback(move |_| AddFilterMessage::Save(url.clone(), title.clone(), category()))} class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded z-60">{"Save"}</button>
+                                        <button onclick={_ctx.link().callback(move |_| AddFilterMessage::Save(url.clone(), title.clone(), category.clone()))} class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded z-60">{"Save"}</button>
                                         <button onclick={_ctx.link().callback(|_| AddFilterMessage::Close)} class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded z-60">{"Cancel"}</button>
                                     </div>
                                 </div>
