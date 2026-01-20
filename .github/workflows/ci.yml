@@ -58,8 +58,6 @@ jobs:
 
       - name: Build for MIPS
         run: |
-          # 1. Environment variables for Cross (-e) come before 'build'
-          # 2. Cargo arguments (like -Z) come after 'build'
           cross +nightly -e RING_PREGENERATE_ASM=1 build --release \
             --target mipsel-unknown-linux-gnu \
             --bin privaxy \
