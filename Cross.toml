@@ -2,4 +2,4 @@
 # Mandatory for Tier 3 targets in 2026
 build-std = ["core", "std", "alloc", "panic_unwind"]
 # If the build still fails, try forcing the C compiler logic:
-env = { set = { "RING_PREGENERATE_ASM" = "1" } }
+# env = { set = { "RING_PREGENERATE_ASM" = "1" } }
