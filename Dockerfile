@@ -48,6 +48,7 @@ RUN trunk build --release
 # will panic when cross-compiling to mipsel because ring
 # does not have pre-generated assembly or build logic for MIPS architectures
 # ENV RING_PREGENERATE_ASM=1
+RUN cargo update -p ring --precise 0.17.12
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
