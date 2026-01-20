@@ -10,4 +10,6 @@ opt-level = 3
 # ring = { git = "https://github.com/briansmith/ring.git", branch = 'release-branch/0.17.12' }
 
 [patch.crates-io]
-ring = { git = "https://github.com/veracruz-project/ring.git", package = "ring" }
+# ring = { git = "https://github.com/veracruz-project/ring.git", package = "ring" }
+ring = { git = "https://github.com/veracruz-project/ring.git", branch = 'veracruz_0.16.20' }
+
