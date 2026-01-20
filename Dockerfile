@@ -43,6 +43,12 @@ COPY web_frontend/ /app/web_frontend/
 RUN trunk build --release
 
 # 4. Build backend binary
+
+# Set this before running cargo build because (fucking) RING 16.20
+# will panic when cross-compiling to mipsel because ring
+# does not have pre-generated assembly or build logic for MIPS architectures
+ENV RING_PREGENERATE_ASM=1
+
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 # Pre-build dependencies to cache them (using -Zbuild-std)
