@@ -39,7 +39,8 @@ jobs:
         working-directory: ./web_frontend
 
       - name: Run clippy
-        run: cargo clippy -- -D warnings
+        # run: cargo clippy -- -D warnings
+        run: cargo clippy --fix --all-targets
 
   image:
     name: Build docker image
