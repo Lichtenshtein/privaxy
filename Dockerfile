@@ -42,12 +42,13 @@ COPY . .
 RUN cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu --bin privaxy
 
 # --- Runtime Stage ---
-# CHANGED: Use bullseye-slim because bookworm-slim lacks mipsel manifests in 2026.
-FROM --platform=$TARGETPLATFORM mipsel/debian:bullseye-slim
+# Use debootstrap-ports which contains the actual mipsel binaries.
+# Standard official images no longer carry this manifest.
+FROM urbanogilson/debian-debootstrap-ports:mipsel-bookworm-slim
 
 WORKDIR /app
 
-# Copy the binary from the specific target directory
+# Copy the binary from the cross-compilation target path
 COPY --from=builder /app/target/mipsel-unknown-linux-gnu/release/privaxy /app/privaxy
 
 # Runtime Environment
