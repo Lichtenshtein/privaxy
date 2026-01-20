@@ -29,10 +29,17 @@ ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc
 RUN cargo install trunk
 
 # 3. Build frontend
-COPY web_frontend/package*.json ./web_frontend/
+# FIRST: Copy any local dependencies required by the frontend
+COPY filterlists-api /app/filterlists-api
+
+# SECOND: Copy the frontend files
+COPY web_frontend/package*.json /app/web_frontend/
 WORKDIR /app/web_frontend
 RUN npm ci
-COPY web_frontend/ ./
+
+COPY web_frontend/ /app/web_frontend/
+
+# Now trunk can find /app/filterlists-api/Cargo.toml
 RUN trunk build --release
 
 # 4. Build backend binary
