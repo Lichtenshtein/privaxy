@@ -58,10 +58,12 @@ jobs:
 
       - name: Build for MIPS
         run: |
-          cross +nightly build --release --target mipsel-unknown-linux-gnu --bin privaxy
-        env:
-          # This variable helps ring bypass some assembly checks if needed
-          RING_PREGENERATE_ASM: 1 
+          # We use +nightly and -Z build-std because mipsel is Tier 3
+          cross +nightly build --release \
+              --target mipsel-unknown-linux-gnu \
+              --bin privaxy \
+              -Z build-std=std,panic_unwind \
+              -e RING_PREGENERATE_ASM=1
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
