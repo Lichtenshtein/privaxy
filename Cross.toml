@@ -1,2 +1,5 @@
+[target.mipsel-unknown-linux-gnu]
+build-std = ["std", "panic_unwind"]
+
 [target.mipsel-unknown-linux-gnu.env]
 set = { "RING_PREGENERATE_ASM" = "1", "CC" = "mipsel-linux-gnu-gcc" }
