@@ -2,7 +2,7 @@
 ARG PRIVAXY_BASE_PATH="/conf"
 
 # --- Build Stage ---
-FROM --platform=$BUILDPLATFORM rust:1-sid AS builder
+FROM --platform=$BUILDPLATFORM rust:1-bookworm AS builder
 
 WORKDIR /app
 
