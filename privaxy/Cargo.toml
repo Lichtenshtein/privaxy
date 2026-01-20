@@ -1,5 +1,3 @@
-This is a Privaxy's Cargo.toml with it's dependencies:
-
 [package]
 name = "privaxy"
 description = "Next generation tracker and advertisement blocker"
