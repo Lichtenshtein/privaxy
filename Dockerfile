@@ -43,7 +43,7 @@ RUN cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-
 
 # --- Runtime Stage ---
 # CHANGED: Use bullseye-slim because bookworm-slim lacks mipsel manifests in 2026.
-FROM --platform=linux/mipsel debian:bullseye-slim
+FROM --platform=$TARGETPLATFORM mipsel/debian:bullseye-slim
 
 WORKDIR /app
 
