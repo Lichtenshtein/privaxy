@@ -50,7 +50,7 @@ jobs:
 
       # 1. Install 'cross'
       - name: Install Cross
-        run: cargo install cross --git 
+        run: cargo install cross --git https://github.com/cross-rs/cross
 
       # 2. Build the binary using Cross (This handles the MIPS toolchain)
       - name: Build for MIPS
