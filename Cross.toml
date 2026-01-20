@@ -1,0 +1,3 @@
+[target.mipsel-unknown-linux-gnu]
+# This tells cross to build the standard library from source
+build-std = ["std", "panic_unwind"]
