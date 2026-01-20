@@ -13,13 +13,12 @@ jobs:
       - name: Install Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: clippy, rust-src # Added rust-src here
+          components: clippy, rust-src
           targets: wasm32-unknown-unknown 
 
       - name: Cache Rust
         uses: swatinem/rust-cache@v2
 
-      # Replaced slow 'cargo install' with fast binary download
       - name: Install Trunk
         uses: jetli/trunk-action@v0.5.0
 
@@ -39,13 +38,15 @@ jobs:
         working-directory: ./web_frontend
 
       - name: Run clippy
-        # run: cargo clippy -- -D warnings
+        # Fail build if there are warnings (standard CI behavior)
+        # run: cargo clippy --all-targets -- -D warnings
+        # Try to fix and then exit successfully
         run: cargo clippy --fix --all-targets --allow-dirty
 
   image:
     name: Build docker image
     runs-on: ubuntu-latest
-    needs: clippy_check # Ensure tests pass before building image
+    needs: clippy_check 
     permissions:
       contents: read
       packages: write
@@ -53,9 +54,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Required for multi-platform builds
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        with:
+          platforms: mipsel # Explicitly enable mipsel emulation
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -80,7 +82,6 @@ jobs:
         uses: docker/build-push-action@v6
         with: 
           context: .
-          # Enabled linux/mipsel here
           platforms: linux/amd64,linux/mipsel
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: ghcr.io/lichtenshtein/privaxy:${{ env.IMAGE_TAG }}
