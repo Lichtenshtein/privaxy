@@ -56,19 +56,6 @@ jobs:
       - name: Install Cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
-      - name: Patch Ring build.rs for MIPS
-        run: |
-          # Locate the ring source in the cargo registry
-          RING_DIR=$(cargo metadata --format-version 1 | jq -r '.packages[] | select(.name=="ring") | .manifest_path' | xargs dirname)
-          
-          # Use sed to replace the panicking unwrap with a safe fallback
-          # Note: The exact line number is 361 in your specific error log
-          sed -i '358s/\.unwrap()/.get_or_insert(\&"mipsel")/' "$RING_DIR/build.rs"
-          
-          # Alternatively, force the build script to exit early if it's MIPS
-          # by adding a conditional return at the top of the main function
-          # sed -i 's/fn main() {/fn main() { if std::env::var("TARGET").unwrap_or_default().contains("mipsel") { return; }/' "$RING_DIR/build.rs"
-
       - name: Build for MIPS
         run: |
           cargo update -p ring@0.16.20 && CROSS_NO_WARNINGS=0 cross +nightly build --release --target mipsel-unknown-linux-gnu --bin privaxy
