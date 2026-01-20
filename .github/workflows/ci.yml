@@ -58,8 +58,11 @@ jobs:
 
       - name: Build for MIPS
         run: |
-          cargo update -p ring@0.16.20 && CROSS_NO_WARNINGS=0 cross +nightly build --release --target mipsel-unknown-linux-gnu --bin privaxy
-
+          cargo update -p ring@0.16.20
+          CROSS_NO_WARNINGS=0 cross +nightly -e RING_PREGENERATE_ASM=1 -e CC=mipsel-linux-gnu-gcc \
+            build --release --target mipsel-unknown-linux-gnu --bin privaxy \
+            -Z build-std=std,panic_unwind
+  
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
