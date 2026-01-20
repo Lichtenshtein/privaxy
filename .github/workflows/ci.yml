@@ -58,7 +58,7 @@ jobs:
 
       - name: Build for MIPS
         run: |
-          run: cross +nightly build --release --target mipsel-unknown-linux-gnu --bin privaxy
+          cross +nightly build --release --target mipsel-unknown-linux-gnu --bin privaxy
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
