@@ -6,7 +6,6 @@ FROM --platform=$BUILDPLATFORM rust:1-bookworm AS builder
 WORKDIR /app
 
 # 1. Install system dependencies
-# Node 22.x is standard for early 2026
 RUN apt-get update && apt-get install -qy \
     pkg-config build-essential cmake clang libssl-dev git \
     gcc-mipsel-linux-gnu \
@@ -16,26 +15,26 @@ RUN apt-get update && apt-get install -qy \
     && apt-get install -qy nodejs
 
 # 2. Setup Rust Nightly for -Zbuild-std
+# Required because mipsel is a Tier 3 target and does not ship with pre-compiled artifacts
 RUN rustup toolchain install nightly && \
     rustup component add rust-src --toolchain nightly && \
     rustup target add wasm32-unknown-unknown
 
 # Explicitly set the linker for the mipsel target
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc
-# Trunk for frontend
 RUN cargo install trunk
 
-# 3. Build frontend (Done early to cache layers better)
+# 3. Build frontend
 COPY web_frontend/package*.json ./web_frontend/
 WORKDIR /app/web_frontend
 RUN npm ci
 COPY web_frontend/ ./
 RUN trunk build --release
 
-# 4. Build backend
+# 4. Build backend binary
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
-# Pre-build dependencies to cache them
+# Pre-build dependencies to cache them (using -Zbuild-std)
 RUN mkdir src && echo "fn main() {}" > src/main.rs && \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
 
@@ -43,12 +42,12 @@ COPY . .
 RUN cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu --bin privaxy
 
 # --- Runtime Stage ---
-# MUST use Bookworm; Trixie (Debian 13) dropped mipsel support in 2026.
-FROM --platform=linux/mipsel debian:bookworm-slim
+# CHANGED: Use bullseye-slim because bookworm-slim lacks mipsel manifests in 2026.
+FROM --platform=linux/mipsel debian:bullseye-slim
 
 WORKDIR /app
 
-# Copy the binary from the specific cross-compilation target path
+# Copy the binary from the specific target directory
 COPY --from=builder /app/target/mipsel-unknown-linux-gnu/release/privaxy /app/privaxy
 
 # Runtime Environment
