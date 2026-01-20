@@ -1,7 +1,5 @@
-# [target.mipsel-unknown-linux-gnu]
-# Fixes the "rust-std not available" error
-# build-std = ["std", "panic_unwind"]
+[target.mipsel-unknown-linux-gnu]
+build-std = ["std", "panic_unwind"]
 
-# Fixes the "ring v0.16.20" unwrap() panic
-# [target.mipsel-unknown-linux-gnu.env]
-# set = { "RING_PREGENERATE_ASM" = "1" }
+[target.mipsel-unknown-linux-gnu.env]
+set = { "RING_PREGENERATE_ASM" = "1" }
