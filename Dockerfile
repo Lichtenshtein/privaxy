@@ -44,7 +44,7 @@ RUN cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-
 # --- Runtime Stage ---
 # Use debootstrap-ports which contains the actual mipsel binaries.
 # Standard official images no longer carry this manifest.
-FROM urbanogilson/debian-debootstrap-ports:mipsel-bookworm-slim
+FROM multiarch/debian-debootstrap:mipsel-buster
 
 WORKDIR /app
 
