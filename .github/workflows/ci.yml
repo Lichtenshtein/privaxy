@@ -51,8 +51,7 @@ jobs:
       - name: Install Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: rust-src, clippy 
-          targets: mipsel-unknown-linux-gnu
+          components: rust-src # This contains the source code for 'core' and 'std'
 
       - name: Install Cross
         run: cargo install cross --git https://github.com/cross-rs/cross
