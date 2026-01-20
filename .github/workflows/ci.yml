@@ -43,7 +43,6 @@ jobs:
         # Try to fix and then exit successfully
         run: cargo clippy --fix --all-targets --allow-dirty
 
-  image:
   build_mipsel:
     runs-on: ubuntu-latest
     steps:
