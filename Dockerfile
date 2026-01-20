@@ -11,7 +11,11 @@ RUN apt-get update && apt-get install -qy \
     gcc-mipsel-linux-gnu \
     g++-mipsel-linux-gnu \
     libc6-dev-mipsel-cross \
-    && curl -fsSL https://deb.nodesource.com | bash - \
+    ca-certificates curl gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
     && apt-get install -qy nodejs
 
 # 2. Setup Rust Nightly for -Zbuild-std
