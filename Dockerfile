@@ -43,12 +43,17 @@ COPY Cargo.toml Cargo.lock ./
 COPY privaxy/Cargo.toml ./privaxy/
 COPY filterlists-api/Cargo.toml ./filterlists-api/
 
+# Required for ring cross-compilation logic
+ENV RING_PREGENERATE_ASM=1
+
 # Step A: Cache dependencies with dummy build
 # We create files exactly where your privaxy/Cargo.toml expects them: src/server/
 RUN mkdir -p privaxy/src/server filterlists-api/src && \
     echo "fn main() {}" > privaxy/src/server/main.rs && \
     touch privaxy/src/server/lib.rs && \
     touch filterlists-api/src/lib.rs && \
+    # FIX: Define the missing SYS_GETRANDOM syscall for MIPS
+    RUSTFLAGS="--cfg libc_priv_getrandom -D SYS_GETRANDOM=4353" \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
 
 # Step B: Final build execution
@@ -59,6 +64,7 @@ COPY . .
 #    With perl installed, ring 0.17.8 will generate MIPS assembly correctly 
 #    without hitting the buggy "pregenerate" symlink logic.
 RUN rm -rf target/mipsel-unknown-linux-gnu/release/build && \
+    RUSTFLAGS="-D SYS_GETRANDOM=4353" \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu --bin privaxy
 
 # --- Runtime Stage ---
