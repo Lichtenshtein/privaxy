@@ -39,6 +39,8 @@ RUN trunk build --release
 WORKDIR /app
 
 COPY Cargo.toml Cargo.lock ./
+COPY privaxy/Cargo.toml ./privaxy/
+COPY filterlists-api/Cargo.toml ./filterlists-api/
 
 RUN ls -l ./*
 
@@ -46,7 +48,9 @@ RUN ls -l ./*
 ENV RING_PREGENERATE_ASM=1
 
 # Step A: Cache dependencies with dummy build
-RUN mkdir src && echo "fn main() {}" > src/main.rs && \
+RUN mkdir -p privaxy/src filterlists-api/src && \
+    echo "fn main() {}" > privaxy/src/main.rs && \
+    touch filterlists-api/src/lib.rs && \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
 
 COPY . .  
