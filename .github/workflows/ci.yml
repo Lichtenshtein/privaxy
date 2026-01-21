@@ -63,6 +63,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker-container  # Required for true multi-platform
+          # cleanup: true
 
       - name: Get image tag
         id: vars
