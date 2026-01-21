@@ -38,23 +38,27 @@ RUN trunk build --release
 # 4. Build backend binary
 WORKDIR /app
 
+# Copy all manifests
 COPY Cargo.toml Cargo.lock ./
 COPY privaxy/Cargo.toml ./privaxy/
 COPY filterlists-api/Cargo.toml ./filterlists-api/
 
-RUN ls -l ./*
-
-# Required for ring cross-compilation
-ENV RING_PREGENERATE_ASM=1
-
 # Step A: Cache dependencies with dummy build
-RUN mkdir -p privaxy/src filterlists-api/src && \
-    echo "fn main() {}" > privaxy/src/main.rs && \
+# We create files exactly where your privaxy/Cargo.toml expects them: src/server/
+RUN mkdir -p privaxy/src/server filterlists-api/src && \
+    echo "fn main() {}" > privaxy/src/server/main.rs && \
+    touch privaxy/src/server/lib.rs && \
     touch filterlists-api/src/lib.rs && \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
 
+# Step B: Final build execution
 COPY . .  
-RUN rm -rf target/mipsel-unknown-linux-gnu/release/build/ring-* && \
+ 
+# 1. We delete the entire target build directory to ensure no stale symlinks exist.
+# 2. We do NOT set RING_PREGENERATE_ASM=1. 
+#    With perl installed, ring 0.17.8 will generate MIPS assembly correctly 
+#    without hitting the buggy "pregenerate" symlink logic.
+RUN rm -rf target/mipsel-unknown-linux-gnu/release/build && \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu --bin privaxy
 
 # --- Runtime Stage ---
