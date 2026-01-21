@@ -40,6 +40,8 @@ WORKDIR /app
 
 COPY Cargo.toml Cargo.lock ./
 
+RUN ls -l ./*
+
 # Required for ring cross-compilation
 ENV RING_PREGENERATE_ASM=1
 
