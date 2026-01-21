@@ -44,7 +44,7 @@ COPY privaxy/Cargo.toml ./privaxy/
 COPY filterlists-api/Cargo.toml ./filterlists-api/
 
 # Required for ring cross-compilation logic
-ENV RING_PREGENERATE_ASM=1
+# ENV RING_PREGENERATE_ASM=1
 
 # Step A: Cache dependencies with dummy build
 # We create files exactly where your privaxy/Cargo.toml expects them: src/server/
