@@ -38,22 +38,15 @@ RUN trunk build --release
 # 4. Build backend binary
 WORKDIR /app
 
-# FIX 1: Copy ALL Cargo.toml files first to satisfy workspace dependencies for the dummy build
 COPY Cargo.toml Cargo.lock ./
-COPY privaxy/Cargo.toml ./privaxy/
-COPY filterlists-api/Cargo.toml ./filterlists-api/
 
 # Required for ring cross-compilation
 ENV RING_PREGENERATE_ASM=1
 
 # Step A: Cache dependencies with dummy build
-# We create a dummy main.rs inside the member directory to satisfy the workspace
-RUN mkdir -p privaxy/src && echo "fn main() {}" > privaxy/src/main.rs && \
+RUN mkdir src && echo "fn main() {}" > src/main.rs && \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
 
-# Step B: Final build cleanup and execution
-# FIX 2: We must remove the ring build artifacts IMMEDIATELY before the final build
-# to ensure no stale symlinks cause the "AlreadyExists" panic.
 COPY . .  
 RUN rm -rf target/mipsel-unknown-linux-gnu/release/build/ring-* && \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu --bin privaxy
