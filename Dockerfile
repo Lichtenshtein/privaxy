@@ -44,7 +44,7 @@ COPY privaxy/Cargo.toml ./privaxy/
 COPY filterlists-api/Cargo.toml ./filterlists-api/
 
 # Required for ring cross-compilation logic
-ENV RING_PREGENERATE_ASM=1
+# ENV RING_PREGENERATE_ASM=1
 
 # Step A: Cache dependencies with dummy build
 # We create files exactly where your privaxy/Cargo.toml expects them: src/server/
@@ -52,8 +52,14 @@ RUN mkdir -p privaxy/src/server filterlists-api/src && \
     echo "fn main() {}" > privaxy/src/server/main.rs && \
     touch privaxy/src/server/lib.rs && \
     touch filterlists-api/src/lib.rs && \
-    RUSTC_BOOTSTRAP=1 \
+    # Fetch dependencies so we can patch them
+    cargo +nightly fetch --target mipsel-unknown-linux-gnu || true && \
+    # PATCH: Find the ring source in the cargo registry and inject the SYS_GETRANDOM constant for MIPS
+    RING_DIR=$(find /usr/local/cargo/registry/src -name "ring-0.17.8") && \
+    sed -i '1i #![allow(unused_attributes)]' "$RING_DIR/src/rand.rs" && \
+    sed -i '/use crate::{bit, error, polyfill};/a #[cfg(target_arch = "mips")] const SYS_GETRANDOM: libc::long = 4353;' "$RING_DIR/src/rand.rs" && \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
+
 
 # Step B: Final build execution
 COPY . .  
