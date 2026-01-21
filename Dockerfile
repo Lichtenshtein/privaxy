@@ -52,8 +52,7 @@ RUN mkdir -p privaxy/src/server filterlists-api/src && \
     echo "fn main() {}" > privaxy/src/server/main.rs && \
     touch privaxy/src/server/lib.rs && \
     touch filterlists-api/src/lib.rs && \
-    # FIX: Define the missing SYS_GETRANDOM syscall for MIPS
-    RUSTFLAGS="--cfg libc_priv_getrandom -D SYS_GETRANDOM=4353" \
+    RUSTC_BOOTSTRAP=1 \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
 
 # Step B: Final build execution
@@ -63,9 +62,12 @@ COPY . .
 # 2. We do NOT set RING_PREGENERATE_ASM=1. 
 #    With perl installed, ring 0.17.8 will generate MIPS assembly correctly 
 #    without hitting the buggy "pregenerate" symlink logic.
-RUN rm -rf target/mipsel-unknown-linux-gnu/release/build && \
-    RUSTFLAGS="-D SYS_GETRANDOM=4353" \
-    cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu --bin privaxy
+RUN rm -rf target/mipsel-unknown-linux-gnu/release/build/ring-* && \
+    RUSTC_BOOTSTRAP=1 \
+    cargo +nightly build --release \
+    -Zbuild-std=std,panic_unwind \
+    --target mipsel-unknown-linux-gnu \
+    --bin privaxy
 
 # --- Runtime Stage ---
 FROM multiarch/debian-debootstrap:mipsel-bullseye-slim
