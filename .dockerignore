@@ -1,0 +1,4 @@
+target/
+web_frontend/node_modules/
+web_frontend/dist/
+.git/
