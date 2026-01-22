@@ -73,10 +73,11 @@ done
 # Fix 32-bit time_t mismatch for MIPS (Cast i64 to i32 for Asn1Time)
 RUN find privaxy/src -name "*.rs" | while read -r file; do \
     if grep -q "Asn1Time::from_unix" "$file"; then \
-        # This regex captures the ENTIRE content between the first ( and last ) 
-        # and wraps the whole thing in a cast to libc::time_t.
-        sed -i 's/Asn1Time::from_unix(\(.*\))/Asn1Time::from_unix((\1) as libc::time_t)/g' "$file"; \
-        echo "Verified time_t patch: $file"; \
+        echo "Patching time_t in: $file"; \
+        # This regex looks for from_unix(arg) and ensures the cast ONLY wraps the 'arg'
+        # It handles the case where .unwrap() follows the function call.
+        sed -i 's/Asn1Time::from_unix(\([^)]*\))/Asn1Time::from_unix((\1) as libc::time_t)/g' "$file"; \
+        echo "Verified time_t patch for: $file"; \
     fi \
 done
 
