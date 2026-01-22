@@ -1,3 +1,5 @@
+Privaxy/Cargo.toml contents:
+
 [package]
 name = "privaxy"
 description = "Next generation tracker and advertisement blocker"
@@ -32,6 +34,7 @@ name = "privaxy"
 path = "src/server/lib.rs"
 
 [dependencies]
+libc = "0.2"
 hyper = { version = "0.14.29", features = ["full"] }
 tokio = { version = "1.22.0", features = ["full"] }
 serde_json = "1.0.89"
