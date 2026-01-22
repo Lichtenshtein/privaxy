@@ -70,16 +70,22 @@ RUN find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do
     fi \
 done
 
-# Fix 32-bit time_t mismatch for MIPS (Cast i64 to i32 for Asn1Time)
+# Fix 32-bit time_t mismatch for MIPS (Cast i64 to i32 for Asn1Time))
 RUN find privaxy/src -name "*.rs" | while read -r file; do \
     if grep -q "Asn1Time::from_unix" "$file"; then \
         echo "Patching time_t in: $file"; \
-        # This regex looks for from_unix(arg) and ensures the cast ONLY wraps the 'arg'
-        # It handles the case where .unwrap() follows the function call.
-        sed -i 's/Asn1Time::from_unix(\([^)]*\))/Asn1Time::from_unix((\1) as libc::time_t)/g' "$file"; \
+        # Target the specific calculation and wrap it in the cast
+        sed -i 's/Asn1Time::from_unix(\(.*\))\.unwrap()/Asn1Time::from_unix((\1) as libc::time_t).unwrap()/g' "$file"; \
+        # Verification: Fail if the resulting line still contains 'as i64 - 60).unwrap()' 
+        # without the closing cast
+        if grep -q "as i64 - 60).unwrap()" "$file"; then \
+            echo "ERROR: Patch failed to wrap properly in $file"; \
+            exit 1; \
+        fi; \
         echo "Verified time_t patch for: $file"; \
     fi \
 done
+
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc
 ENV CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc
