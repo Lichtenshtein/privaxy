@@ -9,6 +9,7 @@ WORKDIR /app
 # 1. Install system dependencies (including perl)
 RUN apt-get update && apt-get install -qy \
     pkg-config build-essential cmake clang libssl-dev git \
+    binutils-mipsel-linux-gnu \
     gcc-mipsel-linux-gnu \
     g++-mipsel-linux-gnu \
     libc6-dev-mipsel-cross \
@@ -70,22 +71,6 @@ RUN find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do
     fi \
 done
 
-# Fix 32-bit time_t mismatch for MIPS (Cast i64 to i32 for Asn1Time))
-# RUN find privaxy/src -name "*.rs" | while read -r file; do \
-#     if grep -q "Asn1Time::from_unix" "$file"; then \
-#         echo "Patching time_t in: $file"; \
-#         # Target the specific calculation and wrap it in the cast
-#         sed -i 's/Asn1Time::from_unix(\(.*\))\.unwrap()/Asn1Time::from_unix((\1) as libc::time_t).unwrap()/g' "$file"; \
-#         # Verification: Fail if the resulting line still contains 'as i64 - 60).unwrap()' 
-#         # without the closing cast
-#         if grep -q "as i64 - 60).unwrap()" "$file"; then \
-#             echo "ERROR: Patch failed to wrap properly in $file"; \
-#             exit 1; \
-#         fi; \
-#         echo "Verified time_t patch for: $file"; \
-#     fi \
-# done
-
 RUN find privaxy/src -name "*.rs" | while read -r file; do \
     if grep -q "Asn1Time::from_unix" "$file"; then \
         echo "Patching: $file"; \
@@ -109,15 +94,10 @@ done
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc
 ENV CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc
 ENV RUSTFLAGS="-C linker=mipsel-linux-gnu-gcc"
+ENV AR_mipsel_unknown_linux_gnu=mipsel-linux-gnu-ar
 ENV RING_CORE_NO_ASM=1
 
-# 1. We delete the entire target build directory to ensure no stale symlinks exist.
-# 2. We do NOT set RING_PREGENERATE_ASM=1. 
-#    With perl installed, ring 0.17.8 will generate MIPS assembly correctly 
-#    without hitting the buggy "pregenerate" symlink logic.
-# RUN rm -rf target/mipsel-unknown-linux-gnu/release/build/ring-* && \
 RUN RUSTC_BOOTSTRAP=1 \
-    RING_CORE_NO_ASM=1 \
     cargo +nightly build --release \
     -Zbuild-std=std,panic_unwind \
     --target mipsel-unknown-linux-gnu \
