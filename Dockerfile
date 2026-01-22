@@ -53,10 +53,11 @@ RUN mkdir -p privaxy/src/server filterlists-api/src && \
     touch filterlists-api/src/lib.rs && \
     # Fetch dependencies so we can patch them
     cargo +nightly fetch --target mipsel-unknown-linux-gnu || true && \
-    RING_DIR=$(find /usr/local/cargo -name "rand.rs" | grep "ring" | xargs dirname | head -n 1) && \
-    echo "Patching ring in: $RING_DIR" && \
-    sed -i '1i #![allow(unused_attributes)]' "$RING_DIR/rand.rs" && \
-    sed -i '/use crate::{bit, error, polyfill};/a #[cfg(target_arch = "mips")] const SYS_GETRANDOM: libc::long = 4353;' "$RING_DIR/rand.rs" && \
+    find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do \
+        echo "Patching $file"; \
+        sed -i '1i #![allow(unused_attributes)]' "$file"; \
+        sed -i '/use crate::{bit, error, polyfill};/a #[cfg(target_arch = "mips")] const SYS_GETRANDOM: libc::long = 4353;' "$file"; \
+    done \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
 
 # Step B: Final build execution
@@ -65,14 +66,15 @@ COPY . .
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc
 ENV CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc
 ENV RUSTFLAGS="-C linker=mipsel-linux-gnu-gcc"
+ENV RING_CORE_NO_ASM=1
 
 # 1. We delete the entire target build directory to ensure no stale symlinks exist.
 # 2. We do NOT set RING_PREGENERATE_ASM=1. 
 #    With perl installed, ring 0.17.8 will generate MIPS assembly correctly 
 #    without hitting the buggy "pregenerate" symlink logic.
 # RUN rm -rf target/mipsel-unknown-linux-gnu/release/build/ring-* && \
-#     RUSTC_BOOTSTRAP=1 \
-RUN cargo +nightly build --release \
+RUN RUSTC_BOOTSTRAP=1 \
+    cargo +nightly build --release \
     -Zbuild-std=std,panic_unwind \
     --target mipsel-unknown-linux-gnu \
     --bin privaxy
