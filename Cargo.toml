@@ -15,5 +15,5 @@ opt-level = 3
 
 [patch.crates-io]
 # Redirect both potential versions to fixed 0.17 branch
-"ring:0.16.20" = { git = "https://github.com/Lichtenshtein/ring.git"", branch = "veracruz_0.16.20" }
-"ring:0.17.8" = { git = "https://github.com/Lichtenshtein/ring.git"", branch = "veracruz_0.16.20" }
+"ring:0.16.20" = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20" }
+"ring:0.17.8" = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20" }
