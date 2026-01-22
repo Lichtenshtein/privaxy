@@ -42,26 +42,27 @@ COPY Cargo.toml Cargo.lock ./
 COPY privaxy/Cargo.toml ./privaxy/
 COPY filterlists-api/Cargo.toml ./filterlists-api/
 
-# Required for ring cross-compilation logic
-# ENV RING_PREGENERATE_ASM=1
-
 # Step A: Cache dependencies with dummy build
 # We create files exactly where your privaxy/Cargo.toml expects them: src/server/
-RUN mkdir -p privaxy/src/server filterlists-api/src && \
-    echo "fn main() {}" > privaxy/src/server/main.rs && \
-    touch privaxy/src/server/lib.rs && \
-    touch filterlists-api/src/lib.rs && \
-    # Fetch dependencies so we can patch them
-    cargo +nightly fetch --target mipsel-unknown-linux-gnu || true && \
-    find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do \
+# RUN mkdir -p privaxy/src/server filterlists-api/src && \
+#    echo "fn main() {}" > privaxy/src/server/main.rs && \
+#    touch privaxy/src/server/lib.rs && \
+#    touch filterlists-api/src/lib.rs
+
+# Fetch dependencies so we can patch them
+RUN cargo +nightly fetch --target mipsel-unknown-linux-gnu || true
+
+# Universal patcher: finds rand.rs in all ring checkouts (git or registry)
+RUN find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do \
     echo "Patching ring file: $file"; \
     # Only insert if not already present to avoid duplicates
     if ! grep -q "SYS_GETRANDOM" "$file"; then \
         sed -i '1i #![allow(unused_attributes)]' "$file"; \
         sed -i '/use crate::{bit, error, polyfill};/a #[cfg(target_arch = "mips")] const SYS_GETRANDOM: libc::long = 4353;' "$file"; \
     fi \
-    done \
-    cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
+done
+
+# RUN cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
 
 # Step B: Final build execution
 COPY . .  
