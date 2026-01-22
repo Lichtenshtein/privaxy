@@ -71,21 +71,31 @@ RUN find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do
 done
 
 # Fix 32-bit time_t mismatch for MIPS (Cast i64 to i32 for Asn1Time))
+# RUN find privaxy/src -name "*.rs" | while read -r file; do \
+#     if grep -q "Asn1Time::from_unix" "$file"; then \
+#         echo "Patching time_t in: $file"; \
+#         # Target the specific calculation and wrap it in the cast
+#         sed -i 's/Asn1Time::from_unix(\(.*\))\.unwrap()/Asn1Time::from_unix((\1) as libc::time_t).unwrap()/g' "$file"; \
+#         # Verification: Fail if the resulting line still contains 'as i64 - 60).unwrap()' 
+#         # without the closing cast
+#         if grep -q "as i64 - 60).unwrap()" "$file"; then \
+#             echo "ERROR: Patch failed to wrap properly in $file"; \
+#             exit 1; \
+#         fi; \
+#         echo "Verified time_t patch for: $file"; \
+#     fi \
+# done
+
 RUN find privaxy/src -name "*.rs" | while read -r file; do \
     if grep -q "Asn1Time::from_unix" "$file"; then \
-        echo "Patching time_t in: $file"; \
-        # Target the specific calculation and wrap it in the cast
-        sed -i 's/Asn1Time::from_unix(\(.*\))\.unwrap()/Asn1Time::from_unix((\1) as libc::time_t).unwrap()/g' "$file"; \
-        # Verification: Fail if the resulting line still contains 'as i64 - 60).unwrap()' 
-        # without the closing cast
-        if grep -q "as i64 - 60).unwrap()" "$file"; then \
-            echo "ERROR: Patch failed to wrap properly in $file"; \
-            exit 1; \
-        fi; \
-        echo "Verified time_t patch for: $file"; \
+        echo "Patching: $file"; \
+        # This regex matches the function call and wraps the argument in a cast.
+        # It handles both 'curtime' and '(expression).unwrap()' correctly.
+        sed -i 's/Asn1Time::from_unix(\([^)]*\))/Asn1Time::from_unix((\1) as libc::time_t)/g' "$file"; \
+        # Verification: Ensure the cast exists in the file now.
+        grep -q "as libc::time_t" "$file" || (echo "ERROR: Patch failed for $file" && exit 1); \
     fi \
 done
-
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc
 ENV CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc
