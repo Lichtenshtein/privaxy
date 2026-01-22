@@ -6,14 +6,17 @@ lto = true
 codegen-units = 8
 opt-level = 3
 
-# [patch.crates-io]
+[patch.crates-io]
 # ring = { git = "https://github.com/briansmith/ring.git", branch = 'release-branch/0.17.12' }
 
-#[patch.crates-io]
 # ring = { git = "https://github.com/mesalock-linux/ring-sgx.git", package = "ring" }
 #ring = { git = "https://github.com/Lichtenshtein/ring.git", package = "ring" }
 
-[patch.crates-io]
 # Redirect both potential versions to fixed 0.17 branch
-"ring:0.16.20" = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20" }
-"ring:0.17.8" = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20" }
+# "ring:0.16.20" = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20" }
+# "ring:0.17.8" = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20" }
+
+# Patch for the 0.16.x series
+ring_old = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20", package = "ring:0.16.20" }
+# Patch for the 0.17.x series
+ring_new = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20", package = "ring:0.17.8" }

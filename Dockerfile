@@ -54,9 +54,12 @@ RUN mkdir -p privaxy/src/server filterlists-api/src && \
     # Fetch dependencies so we can patch them
     cargo +nightly fetch --target mipsel-unknown-linux-gnu || true && \
     find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do \
-        echo "Patching $file"; \
+    echo "Patching ring file: $file"; \
+    # Only insert if not already present to avoid duplicates
+    if ! grep -q "SYS_GETRANDOM" "$file"; then \
         sed -i '1i #![allow(unused_attributes)]' "$file"; \
         sed -i '/use crate::{bit, error, polyfill};/a #[cfg(target_arch = "mips")] const SYS_GETRANDOM: libc::long = 4353;' "$file"; \
+    fi \
     done \
     cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
 
@@ -74,6 +77,7 @@ ENV RING_CORE_NO_ASM=1
 #    without hitting the buggy "pregenerate" symlink logic.
 # RUN rm -rf target/mipsel-unknown-linux-gnu/release/build/ring-* && \
 RUN RUSTC_BOOTSTRAP=1 \
+    RING_CORE_NO_ASM=1 \
     cargo +nightly build --release \
     -Zbuild-std=std,panic_unwind \
     --target mipsel-unknown-linux-gnu \
