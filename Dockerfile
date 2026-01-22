@@ -25,7 +25,6 @@ RUN rustup toolchain install nightly && \
     rustup target add wasm32-unknown-unknown
 
 RUN cargo install trunk
-RUN cargo update -p ring
 
 # 3. Build frontend
 COPY filterlists-api /app/filterlists-api
@@ -52,6 +51,8 @@ COPY filterlists-api/Cargo.toml ./filterlists-api/
 
 # Fetch dependencies so we can patch them
 RUN cargo +nightly fetch --target mipsel-unknown-linux-gnu || true
+
+RUN cargo update -p ring
 
 # Universal patcher: finds rand.rs in all ring checkouts (git or registry)
 RUN find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do \
