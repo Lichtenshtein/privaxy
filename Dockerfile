@@ -42,12 +42,10 @@ COPY Cargo.toml Cargo.lock ./
 COPY privaxy/Cargo.toml ./privaxy/
 COPY filterlists-api/Cargo.toml ./filterlists-api/
 
-# Step A: Cache dependencies with dummy build
-# We create files exactly where your privaxy/Cargo.toml expects them: src/server/
-# RUN mkdir -p privaxy/src/server filterlists-api/src && \
-#    echo "fn main() {}" > privaxy/src/server/main.rs && \
-#    touch privaxy/src/server/lib.rs && \
-#    touch filterlists-api/src/lib.rs
+# RUN cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
+
+# Step B: Final build execution
+COPY . .  
 
 # Fetch dependencies so we can patch them
 RUN cargo +nightly fetch --target mipsel-unknown-linux-gnu || true
@@ -57,18 +55,16 @@ RUN cargo update -p ring@0.17.8
 # Universal patcher: finds rand.rs in all ring checkouts (git or registry)
 RUN find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do \
     echo "Patching: $file"; \
-    # Ensure we don't double-patch
-    if ! grep -q "SYS_GETRANDOM" "$file"; then \
-        # Insert the constant. Note: target_arch is "mips" for both mips and mipsel.
-        sed -i '1i #![allow(unused_attributes)]' "$file"; \
-        sed -i '/use crate::{bit, error, polyfill};/a #[cfg(target_arch = "mips")] const SYS_GETRANDOM: libc::long = 4353;' "$file"; \
+    # Check if the file contains the sysrand_chunk module where constants are defined
+    if grep -q "mod sysrand_chunk" "$file"; then \
+        # Ensure we don't double-patch
+        if ! grep -q "target_arch = \"mips\"" "$file"; then \
+            # Inject the MIPS constant after the x86_64 definition
+            sed -i '/target_arch = "x86_64"\]/a \        #[cfg(any(target_arch = "mips", target_arch = "mipsel"))]\n        const SYS_GETRANDOM: c_long = 4353;' "$file"; \
+            echo "Successfully patched MIPS constant into $file"; \
+        fi \
     fi \
 done
-
-# RUN cargo +nightly build --release -Zbuild-std=std,panic_unwind --target mipsel-unknown-linux-gnu || true
-
-# Step B: Final build execution
-COPY . .  
 
 ENV CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc
 ENV CC_mipsel_unknown_linux_gnu=mipsel-linux-gnu-gcc
