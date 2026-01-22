@@ -21,14 +21,15 @@ opt-level = 3
 # Patch for the 0.17.x series
 # ring_new = { git = "https://github.com/integritee-network/ring-xous.git", branch = "bump-0.17.8", package = "ring" }
 
-ring = { git = "https://github.com/integritee-network/ring-xous.git", branch = "bump-0.17.8", package = "ring" }
+ring = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20", package = "ring" }
 
 # If a dependency uses the integritee-network git specifically:
-[patch."https://github.com/integritee-network/ring-xous.git"]
+# [patch."https://github.com/integritee-network/ring-xous.git"]
 # ring = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20" }
-ring = { git = "https://github.com/Mesteery/ring.git", branch = "v0.16.20-wasi" }
+# ring = { git = "https://github.com/Mesteery/ring.git", branch = "v0.16.20-wasi" }
 
 # ring:0.16.20
 # https://github.com/Mesteery/ring.git
 # ring:0.17.8
 # https://github.com/ninegua/ring/tree/wasm32_unknown_unknown_getrandom
+# https://github.com/integritee-network/ring-xous.git
