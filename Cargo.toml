@@ -19,4 +19,4 @@ opt-level = 3
 # Patch for the 0.16.x series
 ring_old = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20", package = "ring" }
 # Patch for the 0.17.x series
-ring_new = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20", package = "ring" }
+ring_new = { git = "https://github.com/integritee-network/ring-xous.git", branch = "bump-0.17.8", package = "ring" }
