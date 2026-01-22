@@ -25,6 +25,7 @@ RUN rustup toolchain install nightly && \
     rustup target add wasm32-unknown-unknown
 
 RUN cargo install trunk
+RUN cargo update -p ring
 
 # 3. Build frontend
 COPY filterlists-api /app/filterlists-api
@@ -54,9 +55,10 @@ RUN cargo +nightly fetch --target mipsel-unknown-linux-gnu || true
 
 # Universal patcher: finds rand.rs in all ring checkouts (git or registry)
 RUN find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do \
-    echo "Patching ring file: $file"; \
-    # Only insert if not already present to avoid duplicates
+    echo "Patching: $file"; \
+    # Ensure we don't double-patch
     if ! grep -q "SYS_GETRANDOM" "$file"; then \
+        # Insert the constant. Note: target_arch is "mips" for both mips and mipsel.
         sed -i '1i #![allow(unused_attributes)]' "$file"; \
         sed -i '/use crate::{bit, error, polyfill};/a #[cfg(target_arch = "mips")] const SYS_GETRANDOM: libc::long = 4353;' "$file"; \
     fi \
