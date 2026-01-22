@@ -17,6 +17,6 @@ opt-level = 3
 # "ring:0.17.8" = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20" }
 
 # Patch for the 0.16.x series
-ring_old = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20", package = "ring:0.16.20" }
+ring_old = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20", package = "ring" }
 # Patch for the 0.17.x series
-ring_new = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20", package = "ring:0.17.8" }
+ring_new = { git = "https://github.com/Lichtenshtein/ring.git", branch = "veracruz_0.16.20", package = "ring" }
