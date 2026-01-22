@@ -235,7 +235,7 @@ impl NetworkConfig {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs() as i64;
-            let current_asn1_time = Asn1Time::from_unix(curtime)?;
+            let current_asn1_time = Asn1Time::from_unix(curtime as libc::time_t)?;
             let expiry = cert.not_after();
             match current_asn1_time.compare(expiry).unwrap() {
                 std::cmp::Ordering::Greater | std::cmp::Ordering::Equal => {
@@ -321,7 +321,7 @@ fn build_ca_signed_cert(
         let current_time = SystemTime::now();
         let since_epoch = current_time.duration_since(UNIX_EPOCH).unwrap();
         // patch NotValidBefore
-        Asn1Time::from_unix(since_epoch.as_secs() as i64 - 60).unwrap()
+        Asn1Time::from_unix((since_epoch.as_secs() as i64 - 60) as libc::time_t).unwrap()
     };
     cert_builder.set_not_before(&not_before).unwrap();
 

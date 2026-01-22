@@ -87,17 +87,22 @@ done
 # done
 
 RUN find privaxy/src -name "*.rs" | while read -r file; do \
-    echo "Patching time_t in: $file"; \
-    \
-    # Patch Case A: Handles the complex expression in cert.rs and network.rs (targeting the specific string pattern)
-    sed -i 's/as i64 - 60)/as i64 - 60 as libc::time_t)/g' "$file"; \
-    \
-    # Patch Case B: Handles the simple 'curtime' variable in network.rs (line 238)
-    sed -i 's/Asn1Time::from_unix(curtime)/Asn1Time::from_unix(curtime as libc::time_t)/g' "$file"; \
-    \
-    # VERIFICATION: Use grep to verify that 'libc::time_t' exists in the files we modified
-    if grep -q "libc::time_t" "$file"; then \
-        echo "Verified time_t patch for: $file"; \
+    if grep -q "Asn1Time::from_unix" "$file"; then \
+        echo "Patching: $file"; \
+        # Patch Case A: Wraps the complex subtraction in ( ... ) as libc::time_t
+        # This converts "Asn1Time::from_unix(expr).unwrap()" to "Asn1Time::from_unix((expr) as libc::time_t).unwrap()"
+        sed -i 's/Asn1Time::from_unix(\([^)]*\))/Asn1Time::from_unix((\1) as libc::time_t)/g' "$file"; \
+        \
+        # Patch Case B: Handles the simple 'curtime' variable in network.rs (line 238)
+        # Result: Asn1Time::from_unix(curtime as libc::time_t)
+        sed -i 's/Asn1Time::from_unix(curtime)/Asn1Time::from_unix(curtime as libc::time_t)/g' "$file"; \
+        \
+        # VERIFICATION: Fail if Asn1Time::from_unix is present but no cast was applied
+        if ! grep -q "as libc::time_t" "$file"; then \
+            echo "ERROR: Patch failed to apply to $file"; \
+            exit 1; \
+        fi; \
+        echo "Verified patch for $file"; \
     fi \
 done
 

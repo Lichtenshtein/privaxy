@@ -117,7 +117,7 @@ impl SignedWithCaCert {
                 .duration_since(UNIX_EPOCH)
                 .expect("Time went backwards");
             // patch NotValidBefore
-            Asn1Time::from_unix(since_epoch.as_secs() as i64 - 60).unwrap()
+            Asn1Time::from_unix((since_epoch.as_secs() as i64 - 60) as libc::time_t).unwrap()
         };
         cert_builder.set_not_before(&not_before).unwrap();
 
