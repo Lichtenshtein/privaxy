@@ -54,15 +54,19 @@ RUN cargo update -p ring@0.17.8
 
 # Universal patcher: finds rand.rs in all ring checkouts (git or registry)
 RUN find /usr/local/cargo -name "rand.rs" | grep "ring" | while read -r file; do \
-    echo "Patching: $file"; \
-    # Check if the file contains the sysrand_chunk module where constants are defined
+    echo "Processing: $file"; \
+    # Check if this version of rand.rs needs the MIPS constant
     if grep -q "mod sysrand_chunk" "$file"; then \
-        # Ensure we don't double-patch
+        # Apply the patch if not already present
         if ! grep -q "target_arch = \"mips\"" "$file"; then \
-            # Inject the MIPS constant after the x86_64 definition
             sed -i '/target_arch = "x86_64"\]/a \        #[cfg(any(target_arch = "mips", target_arch = "mipsel"))]\n        const SYS_GETRANDOM: c_long = 4353;' "$file"; \
-            echo "Successfully patched MIPS constant into $file"; \
-        fi \
+        fi; \
+        # VERIFICATION: Fail the build if the constant is still missing in this file
+        if ! grep -q "const SYS_GETRANDOM: c_long = 4353;" "$file"; then \
+            echo "ERROR: Patch failed for $file"; \
+            exit 1; \
+        fi; \
+        echo "Successfully verified patch for $file"; \
     fi \
 done
 
