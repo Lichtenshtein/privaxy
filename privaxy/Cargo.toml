@@ -1,5 +1,3 @@
-Privaxy/Cargo.toml contents:
-
 [package]
 name = "privaxy"
 description = "Next generation tracker and advertisement blocker"
