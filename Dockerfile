@@ -71,8 +71,7 @@ RUN RUSTC_BOOTSTRAP=1 \
     --bin privaxy
 
 # --- Runtime Stage (Static Binary) ---
-# Using Alpine for 2026 to ensure small size and musl compatibility
-FROM alpine:latest
+FROM lochnair/mipsel-musl-dev:latest
 WORKDIR /app
 COPY --from=builder /app/target/mipsel-unknown-linux-musl/release/privaxy /app/privaxy
 
