@@ -1,3 +1,4 @@
+#![feature(duration_constructors)]
 use crate::{
     blocker::AdblockRequester, ca::make_ca_certificate, proxy::exclusions::LocalExclusionStore,
 };
