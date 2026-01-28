@@ -23,7 +23,7 @@ jobs:
       - name: Install Cross-Compilation Toolchain
         run: |
           sudo apt-get update
-          # sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu libc6-dev-mipsel-cross
+          sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu libc6-dev-mipsel-cross
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -50,7 +50,10 @@ jobs:
             --features "liveview"
         env:
           CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
-          # CC_mipsel_unknown_linux_musl: musl-gcc
+          CC_mipsel_unknown_linux_musl: mipsel-linux-gnu-gcc
+          CXX_mipsel_unknown_linux_musl: mipsel-linux-gnu-g++
+          AR_mipsel_unknown_linux_musl: mipsel-linux-gnu-ar
+          AWS_LC_SYS_NO_ASM: 1 
           RUSTFLAGS: >
             -Z unstable-options
             -C panic=immediate-abort
