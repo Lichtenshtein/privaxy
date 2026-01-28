@@ -1,17 +1,7 @@
 use http::uri::Authority;
-use openssl::{
-    asn1::Asn1Time,
-    bn::{BigNum, MsbOption},
-    hash::MessageDigest,
-    pkey::{PKey, PKeyRef, Private},
-    rsa::Rsa,
-    x509::{
-        extension::{
-            AuthorityKeyIdentifier, BasicConstraints, KeyUsage, SubjectAlternativeName,
-            SubjectKeyIdentifier,
-        },
-        X509NameBuilder, X509Ref, X509Req, X509ReqBuilder, X509,
-    },
+use rcgen::{
+    CertificateParams, DnType, IsCa, KeyPair,
+    KeyUsagePurpose, SanType, Certificate,
 };
 use rustls::ServerConfig;
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
@@ -30,206 +20,93 @@ pub struct SignedWithCaCert {
 impl SignedWithCaCert {
     fn new(
         authority: Authority,
-        private_key: PKey<Private>,
-        ca_certificate: X509,
-        ca_private_key: PKey<Private>,
+        ca_cert: &Certificate,
+        ca_key: &KeyPair, // Explicitly pass the CA key
     ) -> Self {
-        let x509 =
-            Self::build_ca_signed_cert(&ca_certificate, &ca_private_key, &authority, &private_key);
+        let host = authority.host();
+        let common_name = if host.len() > 64 {
+            "privaxy_cn_too_long.local"
+        } else {
+            host
+        };
 
-        let cert_der = x509.to_der().unwrap();
-        let ca_cert_der = ca_certificate.to_der().unwrap();
-        let key_der = private_key.private_key_to_der().unwrap();
+        // 2026 rcgen 0.13: Use new() to initialize params
+        let mut params = CertificateParams::new(vec![host.to_string()]).unwrap();
+        params.distinguished_name.push(DnType::CommonName, common_name);
 
-        let certs: Vec<CertificateDer<'static>> = vec![
-            CertificateDer::from(cert_der),
-            CertificateDer::from(ca_cert_der),
+        // Set Subject Alternative Names
+        if let Ok(ip) = std::net::IpAddr::from_str(host) {
+            params.subject_alt_names.push(SanType::IpAddress(ip));
+        }
+
+        params.key_usages = vec![
+            KeyUsagePurpose::DigitalSignature,
+            KeyUsagePurpose::KeyEncipherment,
         ];
+        params.is_ca = IsCa::NoCa;
 
-        let private_key = PrivateKeyDer::try_from(key_der).unwrap();
+        let key_pair = KeyPair::generate().unwrap();
+
+        // 2026 FIX: signed_by now takes the CA key as the third argument directly
+        let cert = params.signed_by(&key_pair, ca_cert, ca_key).unwrap();
+
+        let cert_der = CertificateDer::from(cert.der().to_vec());
+        let ca_der = CertificateDer::from(ca_cert.der().to_vec());
+        let key_der = PrivateKeyDer::try_from(key_pair.serialize_der()).unwrap();
 
         let server_configuration = ServerConfig::builder()
             .with_no_client_auth()
-            .with_single_cert(certs, private_key)
-            .unwrap();
+            .with_single_cert(vec![cert_der, ca_der], key_der)
+            .expect("Failed to create rustls config");
 
         Self {
             authority,
             server_configuration: Arc::new(server_configuration),
         }
     }
-
-    fn build_certificate_request(key_pair: &PKey<Private>, authority: &Authority) -> X509Req {
-        let mut request_builder = X509ReqBuilder::new().unwrap();
-        request_builder.set_pubkey(key_pair).unwrap();
-
-        let mut x509_name = X509NameBuilder::new().unwrap();
-
-        // Only 64 characters are allowed in the CN field.
-        // (ub-common-name INTEGER ::= 64), browsers are not using CN anymore but uses SANs instead.
-        // Let's use a shorter entry.
-        // RFC 3280.
-        let authority_host = authority.host();
-        let common_name = if authority_host.len() > 64 {
-            "privaxy_cn_too_long.local"
-        } else {
-            authority_host
-        };
-
-        x509_name.append_entry_by_text("CN", common_name).unwrap();
-        let x509_name = x509_name.build();
-        request_builder.set_subject_name(&x509_name).unwrap();
-
-        request_builder
-            .sign(key_pair, MessageDigest::sha256())
-            .unwrap();
-
-        request_builder.build()
-    }
-
-    fn build_ca_signed_cert(
-        ca_cert: &X509Ref,
-        ca_key_pair: &PKeyRef<Private>,
-        authority: &Authority,
-        private_key: &PKey<Private>,
-    ) -> X509 {
-        let req = Self::build_certificate_request(private_key, authority);
-
-        let mut cert_builder = X509::builder().unwrap();
-        cert_builder.set_version(2).unwrap();
-
-        let serial_number = {
-            let mut serial = BigNum::new().unwrap();
-            serial.rand(159, MsbOption::MAYBE_ZERO, false).unwrap();
-            serial.to_asn1_integer().unwrap()
-        };
-
-        cert_builder.set_serial_number(&serial_number).unwrap();
-        cert_builder.set_subject_name(req.subject_name()).unwrap();
-        cert_builder
-            .set_issuer_name(ca_cert.subject_name())
-            .unwrap();
-        cert_builder.set_pubkey(private_key).unwrap();
-
-        let not_before = Asn1Time::days_from_now(0).unwrap();
-        cert_builder.set_not_before(&not_before).unwrap();
-
-        let not_after = Asn1Time::days_from_now(365).unwrap();
-        cert_builder.set_not_after(&not_after).unwrap();
-
-        cert_builder
-            .append_extension(BasicConstraints::new().build().unwrap())
-            .unwrap();
-
-        cert_builder
-            .append_extension(
-                KeyUsage::new()
-                    .critical()
-                    .non_repudiation()
-                    .digital_signature()
-                    .key_encipherment()
-                    .build()
-                    .unwrap(),
-            )
-            .unwrap();
-
-        let subject_alternative_name = match std::net::IpAddr::from_str(authority.host()) {
-            // If we are able to parse the authority as an ip address, let's build an "IP" field instead
-            // of a "DNS" one.
-            Ok(_ip_addr) => {
-                let mut san = SubjectAlternativeName::new();
-                san.ip(authority.host());
-
-                san
-            }
-            Err(_err) => {
-                let mut san = SubjectAlternativeName::new();
-                san.dns(authority.host());
-                san
-            }
-        }
-        .build(&cert_builder.x509v3_context(Some(ca_cert), None))
-        .unwrap();
-
-        cert_builder
-            .append_extension(subject_alternative_name)
-            .unwrap();
-
-        let subject_key_identifier = SubjectKeyIdentifier::new()
-            .build(&cert_builder.x509v3_context(Some(ca_cert), None))
-            .unwrap();
-        cert_builder
-            .append_extension(subject_key_identifier)
-            .unwrap();
-
-        let auth_key_identifier = AuthorityKeyIdentifier::new()
-            .keyid(false)
-            .issuer(false)
-            .build(&cert_builder.x509v3_context(Some(ca_cert), None))
-            .unwrap();
-        cert_builder.append_extension(auth_key_identifier).unwrap();
-
-        cert_builder
-            .sign(ca_key_pair, MessageDigest::sha256())
-            .unwrap();
-
-        cert_builder.build()
-    }
 }
 
 #[derive(Clone)]
 pub struct CertCache {
     cache: Arc<Mutex<LRUCache<SignedWithCaCert, MAX_CACHED_CERTIFICATES>>>,
-    // We use a single RSA key for all certificates.
-    private_key: PKey<Private>,
-    ca_certificate: X509,
-    ca_private_key: PKey<Private>,
+    ca_cert: Arc<Certificate>,
+    ca_key: Arc<KeyPair>, // Store the CA key separately
 }
 
 impl CertCache {
-    pub fn new(ca_certificate: X509, ca_private_key: PKey<Private>) -> Self {
+    pub fn new(ca_cert_pem: &str, ca_key_pem: &str) -> Self {
+        let ca_key = KeyPair::from_pem(ca_key_pem).expect("Invalid CA Key");
+
+        let mut params = CertificateParams::new(vec!["Privaxy CA".to_string()]).unwrap();
+        params.is_ca = IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
+        params.distinguished_name.push(DnType::CommonName, "Privaxy CA");
+
+        let ca_cert = params.self_signed(&ca_key).expect("Failed to sign CA");
+
         Self {
             cache: Arc::new(Mutex::new(LRUCache::default())),
-            private_key: {
-                let rsa = Rsa::generate(2048).unwrap();
-                PKey::from_rsa(rsa).unwrap()
-            },
-            ca_certificate,
-            ca_private_key,
+            ca_cert: Arc::new(ca_cert),
+            ca_key: Arc::new(ca_key),
         }
-    }
-
-    async fn insert(&self, certificate: SignedWithCaCert) {
-        let mut cache = self.cache.lock().await;
-        cache.insert(certificate);
     }
 
     pub async fn get(&self, authority: Authority) -> SignedWithCaCert {
         let mut cache = self.cache.lock().await;
-
-        match cache.find(|cert| cert.authority == authority) {
-            Some(certificate) => certificate.clone(),
-            None => {
-                // We release the previously acquired lock early as `insert`, which we will call just
-                // afterwards also waits to acquire a lock.
-                std::mem::drop(cache);
-
-                let private_key = self.private_key.clone();
-
-                let ca_certificate = self.ca_certificate.clone();
-                let ca_private_key = self.ca_private_key.clone();
-
-                // This operation is somewhat CPU intensive and on some lower powered machines,
-                // not running it inside of a thread pool may cause it to block the executor for too long.
-                let certificate = tokio::task::spawn_blocking(move || {
-                    SignedWithCaCert::new(authority, private_key, ca_certificate, ca_private_key)
-                })
-                .await
-                .unwrap();
-
-                self.insert(certificate.clone()).await;
-                certificate
-            }
+        if let Some(certificate) = cache.find(|cert| cert.authority == authority) {
+            return certificate.clone();
         }
+
+        let ca_cert = self.ca_cert.clone();
+        let ca_key = self.ca_key.clone();
+        let auth_clone = authority.clone();
+
+        let certificate = tokio::task::spawn_blocking(move || {
+            SignedWithCaCert::new(auth_clone, &ca_cert, &ca_key)
+        })
+        .await
+        .expect("Cert gen task failed");
+
+        cache.insert(certificate.clone());
+        certificate
     }
 }

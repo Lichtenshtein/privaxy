@@ -1,235 +1,137 @@
 name: CI
-on: [push, pull_request]
+on:
+  workflow_dispatch:
+
 jobs:
-  clippy_check:
-    name: Run clippy check
+  build-mipsel:
+    name: Build for Mipsel (GNU/Padavan)
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          components: clippy
-          override: true
-
-      - name: Install gui library packages
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.0-dev build-essential libayatana-appindicator3-dev librsvg2-dev libgtk-3-dev libsoup2.4-dev libjavascriptcoregtk-4.0-dev
-
-      - name: Install trunk
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --locked --debug trunk
-
-      - name: Install webassembly rust target
-        run: rustup target add wasm32-unknown-unknown
-
-      # Required for tailwindcss
-      - name: Install node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 14
-      - name: Install node packages
-        working-directory: ./web_frontend
-        run: npm i
-
-      # We need to build the web frontend otherwise, we will not be able to compile
-      # the server and checks will fail.
-      - name: Build web frontend
-        run: trunk build
-        working-directory: ./web_frontend
-
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
-
-  rustfmt:
-    name: Check style
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt
-          profile: minimal
-          override: true
-
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-
-  ci:
-    name: CI
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        include:
-          - build: linux
-            os: ubuntu-latest
-            rust: stable
-            target: x86_64-unknown-linux-gnu
-          - build: linux
-            os: ubuntu-latest
-            rust: stable
-            target: aarch64-unknown-linux-gnu
-          - build: macos
-            os: macos-latest
-            rust: stable
-            target: x86_64-apple-darwin
-          - buid: macos
-            os: macos-latest
-            rust: stable
-            target: aarch64-apple-darwin
-          - build: windows
-            os: windows-latest
-            rust: stable
-            target: x86_64-pc-windows-msvc
+        target: [mipsel-unknown-linux-gnu]
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Cache build artifacts
-        uses: actions/cache@v3
+      - name: Install Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          key:  no_gui-${{ matrix.os }}-${{ matrix.target }}-artifacts
-          path: |
-            ./target
-            ~/.cargo
+          components: rust-src
 
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          profile: minimal
-          override: true
-
-      - name: Install rust target
-        run: rustup target add ${{ matrix.target }}
-
-      - name: Install cross build dependencies
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross
-
-      - name: Build server
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target ${{ matrix.target }} --bin privaxy --target-dir target
-
-      - uses: actions/upload-artifact@v3
-        if: matrix.os != 'windows-latest'
-        with:
-          name: privaxy_nogui-${{ matrix.target }}
-          path: |
-            target/${{ matrix.target }}/release/privaxy
-
-      - uses: actions/upload-artifact@v3
-        if: matrix.os == 'windows-latest'
-        with:
-          name: privaxy_nogui-${{ matrix.target }}
-          path: |
-            target/${{ matrix.target }}/release/privaxy.exe
-
-  ci_desktop:
-    name: CI Desktop
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - build: linux
-            os: ubuntu-latest
-            rust: stable
-          - build: macos
-            os: macos-latest
-            rust: stable
-          - build: windows
-            os: windows-latest
-            rust: stable
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Cache build artifacts
-        uses: actions/cache@v3
-        with:
-          key:  gui-${{ matrix.os }}-artifacts
-          path: |
-            ./target
-            ~/.cargo
-
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          profile: minimal
-          override: true
-
-      - name: Install trunk
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --locked --debug trunk
-
-      - name: Install webassembly rust target
-        run: rustup target add wasm32-unknown-unknown
-
-      # Required for tailwindcss
-      - name: Install node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
-      - if: startsWith(matrix.os, 'ubuntu') == true
-        name: Install gui library packages
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.0-dev build-essential libayatana-appindicator3-dev librsvg2-dev libgtk-3-dev libsoup2.4-dev libjavascriptcoregtk-4.0-dev
-
-      - if: startsWith(matrix.os, 'macos') == true
-        name: Install rust apple arm target
-        run: rustup target add aarch64-apple-darwin
-
-      - if: startsWith(matrix.os, 'macos') == true
-        name: Install apple api key private key
+      - name: Install Cross-Compilation Toolchain
         run: |
-          mkdir -p ~/private_keys
-          echo "$API_KEY" >> ~/private_keys/AuthKey_"$API_KEY_ID".p8
-        shell: bash
-        env:
-          API_KEY: ${{secrets.APPLE_API_KEY_CONTENTS}}
-          API_KEY_ID: ${{secrets.APPLE_API_KEY}}
-        
-      - name: Install node packages
-        working-directory: ./web_frontend
-        run: npm i
-      # It is required to first build the frontend as the server won't
-      # build if it has no access to frontend's dist directory.
-      - name: Build web frontend
-        run: trunk build --release
-        working-directory: ./web_frontend
+          sudo apt-get update
+          sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu libc6-dev-mipsel-cross
 
-      - name: Build desktop app
-        id: desktop_app
-        uses: tauri-apps/tauri-action@5a6072a9edbbf71718caee364b5b96731d7580fc #v0 does not handle universal builds
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+      - name: Cache Cargo
+        uses: actions/cache@v4
         with:
-          tagName: privaxy-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
-          releaseName: 'Privaxy v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: true
-          prerelease: false
-          args: ${{ startsWith(matrix.os, 'macos') == true && '--target universal-apple-darwin' || '' }}
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo
+
+      # - name: Install Cross
+        # run: cargo install cross --git https://github.com/cross-rs/cross.git
+
+      - name: Build MIPS Binary
+        run: |
+          cargo build \
+            --target ${{ matrix.target }} \
+            --release \
+            -p privaxy-app \
+            -Z build-std=std,panic_abort \
+            --no-default-features \
+            --features "liveview"
+        env:
+          CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER: mipsel-linux-gnu-gcc
+          CC_mipsel_unknown_linux_gnu: mipsel-linux-gnu-gcc
+          CXX_mipsel_unknown_linux_gnu: mipsel-linux-gnu-g++
+          PKG_CONFIG_ALLOW_CROSS: 1
+          # ANY_PLATFORM_FOR_AWS_LC_SYS=1
+
+      - name: Create dirlist snapshot
+        run: |
+          find . -print | sed -e 's;[^/]*/;|___;g;s;___|; |;g' > ./post-dir-tree.txt
+          find . -type f -o -type d > ./dir-files.txt
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dioxus-mipsel-musl-binary
+          path: |
+            target/${{ matrix.target }}/release/privaxy-app
+            ./post-dir-tree.txt
+            ./dir-files.txt
+
+  # ci:
+    # name: CI
+    # needs: build-mipsel
+    # runs-on: ${{ matrix.os }}
+    # strategy:
+      # matrix:
+        # include:
+          # - build: linux
+            # os: ubuntu-latest
+            # rust: nightly
+            # target: mipsel-unknown-linux-gnu
+    # steps:
+      # - name: Checkout
+        # uses: actions/checkout@v4
+
+      # - name: Cache build artifacts
+        # uses: actions/cache@v3
+        # with:
+          # key:  no_gui-${{ matrix.os }}-${{ matrix.target }}-artifacts
+          # path: |
+            # ./target
+            # ~/.cargo
+
+      # - name: Install rust
+        # uses: actions-rs/toolchain@v1
+        # with:
+          # toolchain: ${{ matrix.rust }}
+          # profile: minimal
+          # override: true
+
+      # - name: Install cross build dependencies
+        # if: matrix.target == 'aarch64-unknown-linux-gnu'
+        # run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+
+      # - name: Install cross build dependencies
+        # if: matrix.target == 'mipsel-unknown-linux-gnu'
+        # run: sudo apt-get update && sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu
+
+      # - name: Install rust target
+        # run: |
+          # rustc --print=target-list
+          # rustup default nightly
+
+      # - name: Set up Docker
+        # uses: docker/setup-qemu-action@v3
+        # with:
+          # platforms: all
+
+      # - name: Cross compile to mipsel
+        # uses: actions-rs/cargo@v1
+        # with:
+          # use-cross: true
+          # command: build
+          # args: --target mipsel-unknown-linux-gnu --release -Zbuild-std --bin privaxy --target-dir target
+
+      # - uses: actions/upload-artifact@v4
+        # if: matrix.os != 'windows-latest'
+        # with:
+          # name: privaxy_nogui-${{ matrix.target }}
+          # path: |
+            # target/${{ matrix.target }}/release/privaxy
+
+      # - uses: actions/upload-artifact@v4
+        # if: matrix.os == 'windows-latest'
+        # with:
+          # name: privaxy_nogui-${{ matrix.target }}
+          # path: |
+            # target/${{ matrix.target }}/release/*

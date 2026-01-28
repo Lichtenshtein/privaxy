@@ -2,39 +2,38 @@
 name = "privaxy-app"
 version = "0.1.0"
 edition = "2024"
-description = "Privaxy - A privacy-focused ad-blocking proxy"
-authors = ["Privaxy Contributors"]
-license = "MIT"
 
 [dependencies]
-# Dioxus core with desktop and router
-dioxus = { version = "0.7.2", features = ["desktop", "router"] }
+dioxus = { version = "0.7.3", default-features = false, features = ["liveview", "router", "fullstack", "macro", "signals", "asset", "document", "html", "hooks", "server"] }
+axum = "0.8"
+dioxus-fullstack = "0.7.3"
+dioxus-liveview = { version = "0.7.3", features = ["axum"] }
 
-# Async runtime
-tokio = { version = "1.43", features = ["full"] }
+# tokio = { version = "1.43", features = ["full"] }
+tokio = { version = "1.43", features = ["rt-multi-thread", "net", "time", "macros", "fs"] }
 
-# Serialization
+# Use rustls-tls-manual-roots (native-roots often fails on minimal router firmwares)
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "json"] }
+
+# Other dependencies...
+base64 = "0.22"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-
-# Formatting
-num-format = "0.4.0"
-
-# Logging
 log = "0.4"
+num-format = { version = "0.4", features = ["std"] }
 env_logger = "0.11"
-
-# Time utilities
 chrono = { version = "0.4", features = ["serde"] }
-
-# HTTP client
-reqwest = { version = "0.12", features = ["rustls-tls", "json"] }
-
-# File dialogs (use xdg-portal with tokio)
-rfd = { version = "0.16", default-features = false, features = ["xdg-portal", "tokio"] }
-
-# Privaxy core library
 privaxy = { path = "../privaxy" }
 
+# portable-atomic = { version = "1.10", features = ["critical-section"] }
+portable-atomic = { version = "1.10" }
+critical-section = { version = "1.2", features = ["std"] }
+
+[package.metadata.rules]
+# This tells the compiler to replace atomics globally
+"sync_atomic_64" = "portable_atomic"
+
 [features]
-default = []
+liveview = ["dioxus/liveview", "dioxus/fullstack"]
+desktop = ["dioxus/desktop"]
+web = ["dioxus/web"]

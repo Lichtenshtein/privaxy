@@ -86,7 +86,8 @@ pub(crate) async fn serve_mitm_session(
         //
         // When HTTP method is CONNECT we should return an empty body
         // then we can eventually upgrade the connection and talk a new protocol.
-        let server_configuration = cert_cache.get(authority.clone()).await.server_configuration;
+        let cert_cache_entry = cert_cache.get(authority.clone()).await;
+        let server_configuration = cert_cache_entry.server_configuration.clone();
 
         tokio::task::spawn(async move {
             let upgraded = match tokio::time::timeout(TLS_TIMEOUT, hyper::upgrade::on(req)).await {
@@ -112,9 +113,11 @@ pub(crate) async fn serve_mitm_session(
                 return;
             }
 
+            let acceptor = TlsAcceptor::from(server_configuration);
+
             let tls_stream = match tokio::time::timeout(
                 TLS_TIMEOUT,
-                TlsAcceptor::from(server_configuration).accept(TokioIo::new(upgraded))
+                acceptor.accept(TokioIo::new(upgraded))
             ).await {
                 Ok(Ok(stream)) => stream,
                 Ok(Err(error)) => {

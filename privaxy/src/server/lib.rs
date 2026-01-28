@@ -44,7 +44,7 @@ pub async fn start_privaxy() -> PrivaxyServer {
     // Install the ring crypto provider for rustls
     let _ = CryptoProvider::install_default(default_provider());
 
-    let ip = [127, 0, 0, 1];
+    let ip = [0, 0, 0, 0];
 
     // We use reqwest instead of hyper's client to perform most of the proxying as it's more convenient
     // to handle compression as well as offers a more convenient interface.
@@ -72,31 +72,14 @@ pub async fn start_privaxy() -> PrivaxyServer {
         }
     };
 
-    let local_exclusion_store =
-        LocalExclusionStore::new(Vec::from_iter(configuration.exclusions.clone().into_iter()));
-    let local_exclusion_store_clone = local_exclusion_store.clone();
+let local_exclusion_store =
+    LocalExclusionStore::new(Vec::from_iter(configuration.exclusions.clone().into_iter()));
+let local_exclusion_store_clone = local_exclusion_store.clone();
 
-    let ca_certificate = match configuration.ca_certificate() {
-        Ok(ca_certificate) => ca_certificate,
-        Err(err) => {
-            println!("Unable to decode ca certificate: {:?}", err);
-            std::process::exit(1)
-        }
-    };
+let ca_certificate_pem = configuration.ca.ca_certificate_pem.clone();
+let ca_private_key_pem = configuration.ca.ca_private_key_pem.clone();
 
-    let ca_certificate_pem = std::str::from_utf8(&ca_certificate.to_pem().unwrap())
-        .unwrap()
-        .to_string();
-
-    let ca_private_key = match configuration.ca_private_key() {
-        Ok(ca_private_key) => ca_private_key,
-        Err(err) => {
-            println!("Unable to decode ca private key: {:?}", err);
-            std::process::exit(1)
-        }
-    };
-
-    let cert_cache = cert::CertCache::new(ca_certificate, ca_private_key);
+let cert_cache = cert::CertCache::new(&ca_certificate_pem, &ca_private_key_pem);
 
     let statistics = statistics::Statistics::new();
     let statistics_clone = statistics.clone();

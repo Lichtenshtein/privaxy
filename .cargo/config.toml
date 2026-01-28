@@ -1,2 +1,10 @@
-# [target.aarch64-unknown-linux-gnu]
-# linker = "aarch64-linux-gnu-gcc"
+[target.mipsel-unknown-linux-gnu]
+linker = "mipsel-linux-gnu-gcc"
+rustflags = [
+    "-C", "target-feature=+soft-float",
+    "-C", "link-arg=-s",
+    "--cfg", "force_disable_atomic64"
+]
+
+[build]
+target = "mipsel-unknown-linux-gnu"

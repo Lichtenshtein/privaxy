@@ -1,11 +1,21 @@
+cargo-features = ["panic-immediate-abort"]
+
 [workspace]
 resolver = "2"
 members = ["app", "privaxy"]
-# Note: "privaxy" library needs dependency updates before it can be included
-# Legacy crates (to be removed): "web_frontend", "src-tauri"
+
+[patch.crates-io]
+# Redirect crates that require 64-bit atomics to use portable-atomic
+# Note: You may need to patch generational-box specifically if it doesn't
+# have a built-in feature for this.
+# portable-atomic = { version = "1.10" }
+generational-box = { path = "patches/generational-box" }
 
 [profile.release]
-lto = true
+opt-level = "z"     # Optimize for size
+lto = true          # Link Time Optimization
+codegen-units = 1   # Better optimization at the cost of build time
+panic = "immediate-abort"     # Removes stack unwinding code
 
 [profile.release.package.privaxy-app]
 codegen-units = 1

@@ -1,0 +1,30 @@
+[package]
+name = "generational-box"
+authors = ["Evan Almloff"]
+version = "0.7.3"
+edition = "2021"
+description = "A box backed by a generational runtime"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/DioxusLabs/dioxus/"
+keywords = ["generational", "box", "memory", "allocator"]
+rust-version = "1.83.0"
+
+[dependencies]
+parking_lot = "0.12"
+tracing = "0.1"
+portable-atomic = { version = "1.10" }
+
+[dev-dependencies]
+rand = "0.8"
+criterion = "0.5"
+
+[features]
+debug_borrows = []
+debug_ownership = []
+
+[[bench]]
+name = "lock"
+harness = false
+
+[package.metadata.docs.rs]
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]

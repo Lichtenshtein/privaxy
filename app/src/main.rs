@@ -1,6 +1,13 @@
 #![allow(non_snake_case)]
+#[cfg(all(target_arch = "mips", target_endian = "little"))]
+use portable_atomic as _;
 
 use dioxus::prelude::*;
+// 2026 Fix: Import the specific trait for the Axum Router extension
+use dioxus::prelude::dioxus_server::DioxusRouterExt;
+// Use ::axum to refer to the external crate unambiguously
+use ::axum::Router;
+
 use privaxy::PrivaxyServer;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -19,7 +26,8 @@ const RUST_LOG_ENV_KEY: &str = "RUST_LOG";
 // Global state for the privaxy server
 static PRIVAXY_SERVER: GlobalSignal<Option<Arc<RwLock<PrivaxyServer>>>> = Signal::global(|| None);
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // Initialize logging
     if std::env::var(RUST_LOG_ENV_KEY).is_err() {
         unsafe {
@@ -28,6 +36,22 @@ fn main() {
     }
     env_logger::init();
 
+    #[cfg(feature = "liveview")]
+    {
+        // 2026 Standard: Use dioxus::server::router(App)
+        // This returns a standard axum::Router<()> compatible with axum 0.8
+        let app = dioxus::server::router(App);
+
+        let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
+        log::info!("Starting LiveView server on http://{}", addr);
+
+        let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+
+        // Disambiguate call to serve using the top-level ::axum
+        ::axum::serve(listener, app.into_make_service()).await.unwrap();
+    }
+
+    #[cfg(not(feature = "liveview"))]
     dioxus::launch(App);
 }
 

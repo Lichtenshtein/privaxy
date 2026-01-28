@@ -3,10 +3,7 @@ use crate::{
 };
 use dirs::home_dir;
 use futures::future::{try_join_all, AbortHandle, Abortable};
-use openssl::{
-    pkey::{PKey, Private},
-    x509::X509,
-};
+// REMOVED: openssl imports
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::{collections::BTreeSet, time::Duration};
@@ -17,12 +14,14 @@ use url::Url;
 
 const BASE_FILTERS_URL: &str = "https://filters.privaxy.net";
 const METADATA_FILE_NAME: &str = "metadata.json";
-const CONFIGURATION_DIRECTORY_NAME: &str = ".privaxy";
+const CONFIGURATION_DIRECTORY_NAME: &str = "/opt/etc/privaxy";
 const CONFIGURATION_FILE_NAME: &str = "config";
-const FILTERS_DIRECTORY_NAME: &str = "filters";
+const FILTERS_DIRECTORY_NAME: &str = "/opt/etc/privaxy/filters";
 
 // Update filters every 10 minutes.
-const FILTERS_UPDATE_AFTER: Duration = Duration::from_secs(60 * 10);
+// const FILTERS_UPDATE_AFTER: Duration = Duration::from_secs(60 * 10);
+// Make an update every 5 days
+const FILTERS_UPDATE_AFTER: Duration = Duration::from_days(5);
 
 type ConfigurationResult<T> = Result<T, ConfigurationError>;
 
@@ -109,15 +108,15 @@ impl From<DefaultFilter> for Filter {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Ca {
-    ca_certificate: String,
-    ca_private_key: String,
+    pub ca_certificate_pem: String,
+    pub ca_private_key_pem: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Configuration {
     pub exclusions: BTreeSet<String>,
     pub custom_filters: Vec<String>,
-    ca: Ca,
+    pub ca: Ca,
     pub filters: Vec<Filter>,
 }
 
@@ -133,8 +132,9 @@ pub enum ConfigurationError {
     UnableToRetrieveDefaultFilters(#[from] reqwest::Error),
     #[error("unable to decode filter bytes, bad utf8 data")]
     UnableToDecodeFilterbytes(#[from] std::str::Utf8Error),
-    #[error("unable to decode pem data")]
-    UnableToDecodePem(#[from] openssl::error::ErrorStack),
+    // UPDATED: Removed OpenSSL ErrorStack
+    #[error("unable to decode certificate data: {0}")]
+    CertificateError(String),
 }
 
 impl Configuration {
@@ -270,28 +270,20 @@ impl Configuration {
         Ok(())
     }
 
-    pub fn ca_certificate(&self) -> ConfigurationResult<X509> {
-        Ok(X509::from_pem(self.ca.ca_certificate.as_bytes())?)
+    pub fn ca_certificate_pem(&self) -> &str {
+        &self.ca.ca_certificate_pem
     }
 
-    pub fn ca_private_key(&self) -> ConfigurationResult<PKey<Private>> {
-        Ok(PKey::private_key_from_pem(
-            self.ca.ca_private_key.as_bytes(),
-        )?)
+    pub fn ca_private_key_pem(&self) -> &str {
+        &self.ca.ca_private_key_pem
     }
 
+    /// Creates a default configuration with a fresh CA generated via rcgen (pure Rust).
     async fn new_default(http_client: reqwest::Client) -> ConfigurationResult<Self> {
         let default_filters = get_default_filters(http_client).await?;
 
-        let (x509, private_key) = make_ca_certificate();
-
-        let x509_pem = std::str::from_utf8(&x509.to_pem().unwrap())
-            .unwrap()
-            .to_string();
-
-        let private_key_pem = std::str::from_utf8(&private_key.private_key_to_pem_pkcs8().unwrap())
-            .unwrap()
-            .to_string();
+        // In our refactored ca.rs, make_ca_certificate() now returns (String, String)
+        let (cert_pem, key_pem) = make_ca_certificate();
 
         Ok(Configuration {
             filters: default_filters
@@ -299,8 +291,8 @@ impl Configuration {
                 .map(|filter| filter.into())
                 .collect(),
             ca: Ca {
-                ca_certificate: x509_pem,
-                ca_private_key: private_key_pem,
+                ca_certificate_pem: cert_pem,
+                ca_private_key_pem: key_pem,
             },
             exclusions: BTreeSet::new(),
             custom_filters: Vec::new(),
