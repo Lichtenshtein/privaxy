@@ -45,6 +45,7 @@ jobs:
             --release \
             -p privaxy-app \
             -Z build-std=std,panic_abort \
+            -Z unstable-options \
             --no-default-features \
             --features "liveview"
         env:
