@@ -1,4 +1,3 @@
-#![feature(duration_constructors)]
 use crate::{
     blocker::AdblockRequester, ca::make_ca_certificate, proxy::exclusions::LocalExclusionStore,
 };
@@ -22,7 +21,8 @@ const FILTERS_DIRECTORY_NAME: &str = "/opt/etc/privaxy/filters";
 // Update filters every 10 minutes.
 // const FILTERS_UPDATE_AFTER: Duration = Duration::from_secs(60 * 10);
 // Make an update every 5 days
-const FILTERS_UPDATE_AFTER: Duration = Duration::from_days(5);
+// const FILTERS_UPDATE_AFTER: Duration = Duration::from_days(5);
+const FILTERS_UPDATE_AFTER: Duration = Duration::from_secs(5 * 24 * 60 * 60);
 
 type ConfigurationResult<T> = Result<T, ConfigurationError>;
 
