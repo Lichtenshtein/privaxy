@@ -86,7 +86,6 @@ impl Filter {
             Err(err) => Err(ConfigurationError::FileSystemError(err)),
         }
 }
-}
 
 impl From<DefaultFilter> for Filter {
     fn from(default_filter: DefaultFilter) -> Self {
