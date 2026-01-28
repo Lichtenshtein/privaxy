@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [mipsel-unknown-linux-gnu]
+        target: [mipsel-unknown-linux-musl]
 
     steps:
       - name: Checkout
@@ -17,12 +17,13 @@ jobs:
       - name: Install Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
+          targets: mipsel-unknown-linux-musl
           components: rust-src
 
       - name: Install Cross-Compilation Toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu libc6-dev-mipsel-cross
+          # sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu libc6-dev-mipsel-cross
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -47,11 +48,8 @@ jobs:
             --no-default-features \
             --features "liveview"
         env:
-          CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER: mipsel-linux-gnu-gcc
-          CC_mipsel_unknown_linux_gnu: mipsel-linux-gnu-gcc
-          CXX_mipsel_unknown_linux_gnu: mipsel-linux-gnu-g++
-          PKG_CONFIG_ALLOW_CROSS: 1
-          # ANY_PLATFORM_FOR_AWS_LC_SYS=1
+          CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
+          CC_mipsel_unknown_linux_musl: musl-gcc 
 
       - name: Create dirlist snapshot
         run: |

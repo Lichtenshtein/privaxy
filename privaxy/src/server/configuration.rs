@@ -1,7 +1,7 @@
 use crate::{
     blocker::AdblockRequester, ca::make_ca_certificate, proxy::exclusions::LocalExclusionStore,
 };
-use dirs::home_dir;
+// use dirs::home_dir;
 use futures::future::{try_join_all, AbortHandle, Abortable};
 // REMOVED: openssl imports
 use serde::{Deserialize, Serialize};
@@ -14,15 +14,19 @@ use url::Url;
 
 const BASE_FILTERS_URL: &str = "https://filters.privaxy.net";
 const METADATA_FILE_NAME: &str = "metadata.json";
-const CONFIGURATION_DIRECTORY_NAME: &str = "/opt/etc/privaxy";
-const CONFIGURATION_FILE_NAME: &str = "config";
-const FILTERS_DIRECTORY_NAME: &str = "/opt/etc/privaxy/filters";
+const CONFIGURATION_DIRECTORY_PATH: &str = "/opt/etc/privaxy";
+const CONFIGURATION_FILE_NAME: &str = "config.toml";
+const FILTERS_DIRECTORY_NAME: &str = "filters";
 
 // Update filters every 10 minutes.
 // const FILTERS_UPDATE_AFTER: Duration = Duration::from_secs(60 * 10);
 // Make an update every 5 days
 // const FILTERS_UPDATE_AFTER: Duration = Duration::from_days(5);
 const FILTERS_UPDATE_AFTER: Duration = Duration::from_secs(5 * 24 * 60 * 60);
+
+fn get_home_directory() -> ConfigurationResult<PathBuf> {
+    Ok(PathBuf::from("/"))
+}
 
 type ConfigurationResult<T> = Result<T, ConfigurationError>;
 
@@ -56,36 +60,32 @@ impl Filter {
     async fn update(&self, http_client: &reqwest::Client) -> ConfigurationResult<String> {
         log::debug!("Updating filter: {}", self.title);
 
-        let home_directory = get_home_directory()?;
-        let configuration_directory = home_directory.join(CONFIGURATION_DIRECTORY_NAME);
+        let configuration_directory = PathBuf::from(CONFIGURATION_DIRECTORY_NAME);
         let filters_directory = configuration_directory.join(FILTERS_DIRECTORY_NAME);
 
         fs::create_dir_all(&filters_directory).await?;
-
         let filter = get_filter(&self.file_name, http_client).await?;
-
         fs::write(filters_directory.join(&self.file_name), &filter).await?;
 
         Ok(filter)
     }
+}
 
     pub async fn get_contents(&self, http_client: &reqwest::Client) -> ConfigurationResult<String> {
-        let filter_path = get_home_directory()?
-            .join(CONFIGURATION_DIRECTORY_NAME)
+        // This now correctly points to /opt/etc/privaxy/filters/filename
+        let filter_path = get_configuration_base_path()
             .join(FILTERS_DIRECTORY_NAME)
             .join(&self.file_name);
-
-        match fs::read(filter_path).await {
-            Err(err) => {
-                if err.kind() == std::io::ErrorKind::NotFound {
-                    self.update(http_client).await
-                } else {
-                    Err(ConfigurationError::FileSystemError(err))
-                }
-            }
+    
+        match fs::read(&filter_path).await {
             Ok(filter) => Ok(std::str::from_utf8(&filter)?.to_string()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                // If file is missing, trigger download
+                self.update(http_client).await
+            }
+            Err(err) => Err(ConfigurationError::FileSystemError(err)),
         }
-    }
+}
 }
 
 impl From<DefaultFilter> for Filter {
@@ -140,8 +140,7 @@ pub enum ConfigurationError {
 
 impl Configuration {
     pub async fn read_from_home(http_client: reqwest::Client) -> ConfigurationResult<Self> {
-        let home_directory = get_home_directory()?;
-        let configuration_directory = home_directory.join(CONFIGURATION_DIRECTORY_NAME);
+        let configuration_directory = PathBuf::from(CONFIGURATION_DIRECTORY_NAME);
         let configuration_file_path = configuration_directory.join(CONFIGURATION_FILE_NAME);
 
         if let Err(err) = fs::metadata(&configuration_directory).await {
@@ -177,14 +176,12 @@ impl Configuration {
     }
 
     pub async fn save(&self) -> ConfigurationResult<()> {
-        let home_directory = get_home_directory()?;
-        let configuration_directory = home_directory.join(CONFIGURATION_DIRECTORY_NAME);
+        let configuration_directory = PathBuf::from(CONFIGURATION_DIRECTORY_NAME);
         let configuration_file_path = configuration_directory.join(CONFIGURATION_FILE_NAME);
-
+      
         let configuration_serialized = toml::to_string_pretty(&self).unwrap();
-
         fs::write(configuration_file_path, configuration_serialized).await?;
-
+      
         Ok(())
     }
 
@@ -312,13 +309,6 @@ async fn get_default_filters(
     let default_filters = response.json::<Vec<DefaultFilter>>().await?;
 
     Ok(default_filters)
-}
-
-fn get_home_directory() -> ConfigurationResult<PathBuf> {
-    match home_dir() {
-        Some(home_directory) => Ok(home_directory),
-        None => Err(ConfigurationError::HomeDirectoryNotFound),
-    }
 }
 
 async fn get_filter(

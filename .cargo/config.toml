@@ -1,10 +1,14 @@
-[target.mipsel-unknown-linux-gnu]
-linker = "mipsel-linux-gnu-gcc"
+[target.mipsel-unknown-linux-musl]
+linker = "rust-lld"
 rustflags = [
     "-C", "target-feature=+soft-float",
+    "-C", "link-self-contained=yes",
+    "-C", "target-feature=+crt-static",
+    "-C", "link-arg=-static",
+    "-C", "panic=immediate-abort",
     "-C", "link-arg=-s",
     "--cfg", "force_disable_atomic64"
 ]
 
 [build]
-target = "mipsel-unknown-linux-gnu"
+target = "mipsel-unknown-linux-musl"
