@@ -50,7 +50,7 @@ jobs:
             --features "liveview"
         env:
           CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
-          CC_mipsel_unknown_linux_musl: musl-gcc
+          # CC_mipsel_unknown_linux_musl: musl-gcc
           RUSTFLAGS: >
             -Z unstable-options
             -C panic=immediate-abort
