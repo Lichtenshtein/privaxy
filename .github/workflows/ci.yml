@@ -84,16 +84,20 @@ jobs:
             -L $LIBUNWIND_DIR \
             -L $MUSL_LIB_DIR \
             -L $GCC_LIB_DIR \
-            -C link-arg=-Wl,--start-group \
+            -C link-arg=---start-group \
             -C link-arg=-static \
             -C link-arg=-lunwind \
+            -C link-arg=-lunwind-mips \
             -C link-arg=-lgcc \
             -C link-arg=-lgcc_eh \
             -C link-arg=-lc \
             -C link-arg=-s \
-            -C link-arg=-Wl,--end-group \
+            -C link-arg=---end-group \
             --cfg=force_disable_atomic64"
 
+          # Ensure libgcc_eh exists for the linker
+          ln -s "$GCC_LIB_DIR/libgcc.a" "$GCC_LIB_DIR/libgcc_eh.a" || true
+          
           # 4. Run Build
           cargo build \
             --target mipsel-unknown-linux-musl \
