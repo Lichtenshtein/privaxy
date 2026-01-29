@@ -34,13 +34,21 @@ async fn main() {
 
     #[cfg(feature = "liveview")]
     {
-        let app = dioxus::server::router(App);
+        use axum::routing::get;
+        
+        let dioxus_router = dioxus::server::router(App);
+
+        let app = Router::new()
+            .route("/dioxus/index.js", get(|| async {
+                (
+                    [(axum::http::header::CONTENT_TYPE, "application/javascript")],
+                    dioxus::server::index_js(),
+                )
+            }))
+            .merge(dioxus_router);
 
         let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
-        log::info!("Starting LiveView server on http://{}", addr);
-
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-
         axum::serve(listener, app).await.unwrap();
     }
 
@@ -68,7 +76,7 @@ enum Route {
     #[end_nest]
     #[end_layout]
     #[route("/:..route")]
-    NotFound { route: Vec<String> },
+    // NotFound { route: Vec<String> },
 }
 
 #[component]
