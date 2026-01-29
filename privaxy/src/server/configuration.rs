@@ -64,7 +64,7 @@ impl Filter {
     async fn update(&self, http_client: &reqwest::Client) -> ConfigurationResult<String> {
         log::debug!("Updating filter: {}", self.title);
 
-        let configuration_directory = PathBuf::from(CONFIGURATION_DIRECTORY_NAME);
+        let configuration_directory = get_configuration_base_path();
         let filters_directory = configuration_directory.join(FILTERS_DIRECTORY_NAME);
 
         fs::create_dir_all(&filters_directory).await?;
@@ -143,7 +143,7 @@ pub enum ConfigurationError {
 
 impl Configuration {
     pub async fn read_from_home(http_client: reqwest::Client) -> ConfigurationResult<Self> {
-        let configuration_directory = PathBuf::from(CONFIGURATION_DIRECTORY_NAME);
+        let configuration_directory = get_configuration_base_path();
         let configuration_file_path = configuration_directory.join(CONFIGURATION_FILE_NAME);
 
         if let Err(err) = fs::metadata(&configuration_directory).await {
@@ -173,7 +173,7 @@ impl Configuration {
     }
 
     pub async fn save(&self) -> ConfigurationResult<()> {
-        let configuration_directory = PathBuf::from(CONFIGURATION_DIRECTORY_NAME);
+        let configuration_directory = get_configuration_base_path();
         let configuration_file_path = configuration_directory.join(CONFIGURATION_FILE_NAME);
       
         let configuration_serialized = toml::to_string_pretty(&self).unwrap();
