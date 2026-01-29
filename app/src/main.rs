@@ -6,8 +6,8 @@ use dioxus::prelude::*;
 use privaxy::PrivaxyServer;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use axum::Router;
-// use dioxus_fullstack::routing::Router;
+use dioxus::fullstack::prelude::ServeConfig;
+use axum::{Router, ServiceExt};
 
 mod components;
 
@@ -36,20 +36,14 @@ async fn main() {
 
     #[cfg(feature = "liveview")]
     {
-        // 2026 Standard: Use dioxus::server::router(App)
-        // This returns a standard axum::Router<()> compatible with axum 0.8
-        // let app = dioxus::server::router(App);
-
         let app = Router::new()
-            .serve_dioxus_application(ServeConfigBuilder::new().build(), App)
-            .into_make_service();
+            .serve_dioxus_application(ServeConfig::default(), App); 
 
         let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
         log::info!("Starting LiveView server on http://{}", addr);
 
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
-        // Disambiguate call to serve using the top-level ::axum
         ::axum::serve(listener, app.into_make_service()).await.unwrap();
     }
 
