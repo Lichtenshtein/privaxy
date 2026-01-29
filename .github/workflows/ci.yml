@@ -84,7 +84,7 @@ jobs:
             -L $LIBUNWIND_DIR \
             -L $MUSL_LIB_DIR \
             -L $GCC_LIB_DIR \
-            -C link-arg=---start-group \
+            -C link-arg=--start-group \
             -C link-arg=-static \
             -C link-arg=-lunwind \
             -C link-arg=-lunwind-mips \
@@ -92,7 +92,7 @@ jobs:
             -C link-arg=-lgcc_eh \
             -C link-arg=-lc \
             -C link-arg=-s \
-            -C link-arg=---end-group \
+            -C link-arg=--end-group \
             --cfg=force_disable_atomic64"
 
           # Ensure libgcc_eh exists for the linker
