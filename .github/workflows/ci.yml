@@ -80,12 +80,12 @@ jobs:
             -C panic=immediate-abort \
             -C target-feature=+soft-float \
             -C link-self-contained=yes \
-            -C target-feature=+crt-static \
+            # -C target-feature=+crt-static \
             -C link-arg=-static \
             -C link-arg=-lunwind \
             -C link-arg=-lgcc \
             -C link-arg=-lc \
-            -C link-arg=-s \
+            # -C link-arg=-s \
             -L $LIBUNWIND_DIR \
             -L $MUSL_LIB_DIR \
             -L $GCC_LIB_DIR \
