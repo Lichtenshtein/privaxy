@@ -128,6 +128,7 @@ fn NotFound(route: Vec<String>) -> Element {
 #[component]
 fn App() -> Element {
     rsx! {
+        document::Script { src: "/dioxus/index.js" } 
         Router::<Route> {}
     }
 }

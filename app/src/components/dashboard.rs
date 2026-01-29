@@ -3,6 +3,11 @@ use dioxus::prelude::*;
 use num_format::{Locale, ToFormattedString};
 use privaxy::statistics::SerializableStatistics;
 
+let mut count = use_signal(|| 0);
+rsx! {
+    button { onclick: move |_| count += 1, "Count is: {count}" }
+}
+
 #[component]
 pub fn Dashboard() -> Element {
     let mut stats = use_signal(|| SerializableStatistics {
