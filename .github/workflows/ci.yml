@@ -51,15 +51,24 @@ jobs:
           tar -xzf libunwind-1.8.3.tar.gz
           cd libunwind-1.8.3
           sed -i.bak -e '/^#include <endian.h>/d' -e '/^# if __BYTE_ORDER == __BIG_ENDIAN/,/^# endif/c\# undef __BYTE_ORDER__\n# undef __ORDER_BIG_ENDIAN__\n# define OFFSET 0' src/mips/getcontext.S
-          ./configure --host=mipsel-linux-muslsf --enable-static --disable-coredump --disable-shared \
+          
+          ./configure --host=mipsel-linux-muslsf \
+            --enable-static \
+            --disable-coredump \
+            --disable-shared \
+            --disable-tests \
             CC="$TOOLCHAIN_ROOT/bin/mipsel-linux-muslsf-gcc" \
             CCAS="$TOOLCHAIN_ROOT/bin/mipsel-linux-muslsf-gcc" \
             CCASFLAGS="-c"
-          make -j$(nproc)
+          
+          # Only build the 'src' directory to avoid compiling broken tests
+          make -C src -j$(nproc)
+          
+          # The .libs directory will be inside 'src'
           LIBUNWIND_DIR=$(pwd)/src/.libs
           cd ..
 
-          # 3. Path Verification Logic
+          # 3. Resolve exact absolute paths
           GCC_LIB_DIR=$(find "$TOOLCHAIN_ROOT" -name "libgcc.a" -exec dirname {} \; | head -n 1)
           MUSL_LIB_DIR="$TOOLCHAIN_ROOT/mipsel-linux-muslsf/lib"
           
@@ -94,6 +103,7 @@ jobs:
         env:
           CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
           CC_mipsel_unknown_linux_musl: ${{ github.workspace }}/mipsel-linux-muslsf-cross/bin/mipsel-linux-muslsf-gcc
+          AR_mipsel_unknown_linux_musl: ${{ github.workspace }}/mipsel-linux-muslsf-cross/bin/mipsel-linux-muslsf-ar
 
       - name: Create dirlist snapshot
         run: |
