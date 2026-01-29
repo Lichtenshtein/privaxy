@@ -34,15 +34,9 @@ async fn main() {
 
     #[cfg(feature = "liveview")]
     {
-        // use ::axum::routing::get;
-        // use ::axum::response::IntoResponse;
-
-        let dioxus_router = dioxus::server::router(App);
-        let app = ::axum::Router::new().merge(dioxus_router);
+        let app = dioxus::server::router(App);
 
         let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
-        log::info!("Starting LiveView server on http://{}", addr);
-
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
         ::axum::serve(listener, app).await.unwrap();
     }
