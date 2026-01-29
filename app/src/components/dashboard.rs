@@ -3,13 +3,10 @@ use dioxus::prelude::*;
 use num_format::{Locale, ToFormattedString};
 use privaxy::statistics::SerializableStatistics;
 
-let mut count = use_signal(|| 0);
-rsx! {
-    button { onclick: move |_| count += 1, "Count is: {count}" }
-}
-
 #[component]
 pub fn Dashboard() -> Element {
+    let mut count = use_signal(|| 0); // Перенесено сюда
+
     let mut stats = use_signal(|| SerializableStatistics {
         proxied_requests: 0,
         blocked_requests: 0,
@@ -118,6 +115,15 @@ pub fn Dashboard() -> Element {
                 // Top Blocked Paths and Top Clients lists...
                 // (Keep the list logic as it was)
             }
+            div {
+                h1 { "Dashboard" }
+                button { 
+                    class: "p-2 bg-blue-500 text-white rounded",
+                    onclick: move |_| count += 1, 
+                    "Debug Counter: {count}" 
+                }
+            }
+
         }
     }
 }
