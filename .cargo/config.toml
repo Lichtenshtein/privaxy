@@ -1,18 +1,18 @@
 [target.mipsel-unknown-linux-musl]
 linker = "rust-lld"
-rustflags = [
-    "-Z", "unstable-options",
-    "-C", "panic=immediate-abort",
-    "-C", "target-feature=+soft-float",
-    "-C", "link-self-contained=yes",
-    "-C", "target-feature=+crt-static",
-    "-C", "link-arg=-static",
-    "-C", "link-arg=-s",
-    "-C", "link-arg=-lunwind",
-    "-C", "link-arg=-lgcc",
-    "-C", "link-arg=-lc",
-    "--cfg", "force_disable_atomic64"
-]
+# rustflags = [
+    # "-Z", "unstable-options",
+    # "-C", "panic=immediate-abort",
+    # "-C", "target-feature=+soft-float",
+    # "-C", "link-self-contained=yes",
+    # "-C", "target-feature=+crt-static",
+    # "-C", "link-arg=-static",
+    # "-C", "link-arg=-s",
+    # "-C", "link-arg=-lunwind",
+    # "-C", "link-arg=-lgcc",
+    # "-C", "link-arg=-lc",
+    # "--cfg", "force_disable_atomic64"
+# ]
 
 [build]
 target = "mipsel-unknown-linux-musl"
