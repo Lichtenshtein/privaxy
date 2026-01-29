@@ -5,7 +5,7 @@ use privaxy::statistics::SerializableStatistics;
 
 #[component]
 pub fn Dashboard() -> Element {
-    let mut count = use_signal(|| 0); // Перенесено сюда
+    let mut count = use_signal(|| 0);
 
     let mut stats = use_signal(|| SerializableStatistics {
         proxied_requests: 0,
