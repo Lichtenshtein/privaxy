@@ -41,7 +41,8 @@ jobs:
       - name: Build MIPS Binary
         run: |
           # 1. Download Toolchain
-          wget -q https://musl.cc/mips-linux-muslsf-cross.tgz
+          # wget -q https://musl.cc/mips-linux-muslsf-cross.tgz
+          wget -q  https://github.com/dial0ut/nym-vpn-client/releases/download/toolchains-v1/mips-linux-muslsf-cross.tgz
           tar -xzf mipsel-linux-muslsf-cross.tgz
           export TOOLCHAIN_PATH=$(pwd)/mipsel-linux-muslsf-cross
           export PATH="$TOOLCHAIN_PATH/bin:$PATH"
