@@ -24,6 +24,10 @@ const FILTERS_DIRECTORY_NAME: &str = "filters";
 // const FILTERS_UPDATE_AFTER: Duration = Duration::from_days(5);
 const FILTERS_UPDATE_AFTER: Duration = Duration::from_secs(5 * 24 * 60 * 60);
 
+fn get_configuration_base_path() -> PathBuf {
+    PathBuf::from(CONFIGURATION_DIRECTORY_PATH)
+}
+
 fn get_home_directory() -> ConfigurationResult<PathBuf> {
     Ok(PathBuf::from("/"))
 }
@@ -69,22 +73,22 @@ impl Filter {
 
         Ok(filter)
     }
-}
 
     pub async fn get_contents(&self, http_client: &reqwest::Client) -> ConfigurationResult<String> {
-        // This now correctly points to /opt/etc/privaxy/filters/filename
         let filter_path = get_configuration_base_path()
             .join(FILTERS_DIRECTORY_NAME)
             .join(&self.file_name);
-    
-        match fs::read(&filter_path).await {
-            Ok(filter) => Ok(std::str::from_utf8(&filter)?.to_string()),
+
+        let read_result: std::io::Result<Vec<u8>> = fs::read(&filter_path).await;
+
+        match read_result {
+            Ok(bytes) => Ok(std::str::from_utf8(&bytes)?.to_string()),
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                // If file is missing, trigger download
                 self.update(http_client).await
             }
             Err(err) => Err(ConfigurationError::FileSystemError(err)),
         }
+    }
 }
 
 impl From<DefaultFilter> for Filter {
@@ -159,18 +163,12 @@ impl Configuration {
 
         match fs::read(&configuration_file_path).await {
             Ok(bytes) => Ok(toml::from_slice(&bytes)?),
-            Err(err) => {
-                log::debug!("Configuration file not found, creating one");
-
-                if err.kind() == std::io::ErrorKind::NotFound {
-                    let configuration = Self::new_default(http_client).await?;
-                    configuration.save().await?;
-
-                    Ok(configuration)
-                } else {
-                    Err(ConfigurationError::FileSystemError(err))
-                }
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                let configuration = Self::new_default(http_client).await?;
+                configuration.save().await?;
+                Ok(configuration)
             }
+            Err(err) => Err(ConfigurationError::FileSystemError(err)),
         }
     }
 
