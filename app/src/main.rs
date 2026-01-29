@@ -75,7 +75,7 @@ enum Route {
         #[end_layout]
     #[end_nest]
     #[end_layout]
-    #[route("/:..route")]
+    // #[route("/:..route")]
     // NotFound { route: Vec<String> },
 }
 
