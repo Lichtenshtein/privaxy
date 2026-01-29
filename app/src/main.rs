@@ -40,12 +40,12 @@ async fn main() {
         let dioxus_router = dioxus::server::router(App);
 
         let app = ::axum::Router::new()
-            .route("/dioxus/index.js", get(|| async {
-                ::axum::response::Response::builder()
-                    .header("content-type", "application/javascript")
-                    .body(dioxus_liveview::interpreter_glue("/"))
-                    .unwrap()
-            }))
+            // .route("/dioxus/index.js", get(|| async {
+                // ::axum::response::Response::builder()
+                    // .header("content-type", "application/javascript")
+                    // .body(dioxus_liveview::interpreter_glue("/"))
+                    // .unwrap()
+            // }))
             .merge(dioxus_router);
 
         let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
@@ -137,8 +137,10 @@ fn NotFound(route: Vec<String>) -> Element {
 
 #[component]
 fn App() -> Element {
+    let glue = dioxus_liveview::interpreter_glue("/");
     rsx! {
-        document::Script { src: "/dioxus/index.js" } 
+        // document::Script { src: "/dioxus/index.js" }
+        document::RawHtml { html: "{glue}" }
         Router::<Route> {}
     }
 }
