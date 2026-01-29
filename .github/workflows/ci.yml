@@ -40,6 +40,29 @@ jobs:
 
       - name: Build MIPS Binary
         run: |
+          # 1. Download Toolchain
+          wget -q https://musl.cc
+          tar -xzf mipsel-linux-muslsf-cross.tgz
+          export TOOLCHAIN_PATH=$(pwd)/mipsel-linux-muslsf-cross
+          export PATH="$TOOLCHAIN_PATH/bin:$PATH"
+
+          # 2. Build libunwind (The missing link)
+          wget -q https://github.com/libunwind/libunwind/releases/download/v1.8.3/libunwind-1.8.3.tar.gz
+          tar -xzf libunwind-1.8.3.tar.gz
+          cd libunwind-1.8.3
+          # Fix for Little Endian (MT7620A is mipsel)
+          sed -i.bak -e '/^#include <endian.h>/d' -e '/^# if __BYTE_ORDER == __BIG_ENDIAN/,/^# endif/c\# undef __BYTE_ORDER__\n# undef __ORDER_BIG_ENDIAN__\n# define OFFSET 0' src/mips/getcontext.S
+          
+          ./configure --host=mipsel-linux-muslsf --enable-static --disable-coredump --disable-shared CCAS="mipsel-linux-muslsf-gcc" CCASFLAGS="-c"
+          make -j$(nproc)
+          export LIBUNWIND_DIR=$(pwd)/src/.libs
+          cd ..
+
+          # 3. Final Build
+          # Find where the toolchain's internal gcc libs are
+          export GCC_LIB_DIR=$(find $TOOLCHAIN_PATH -name "libgcc.a" | xargs dirname)
+          export MUSL_LIB_DIR=$TOOLCHAIN_PATH/mipsel-linux-muslsf/lib
+          
           cargo build \
             --target ${{ matrix.target }} \
             --release \
@@ -50,10 +73,6 @@ jobs:
             --features "liveview"
         env:
           CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
-          CC_mipsel_unknown_linux_musl: mipsel-linux-gnu-gcc
-          CXX_mipsel_unknown_linux_musl: mipsel-linux-gnu-g++
-          AR_mipsel_unknown_linux_musl: mipsel-linux-gnu-ar
-          # RING_PREGENERATE_ASM: "1"
           RUSTFLAGS: >
             -Z unstable-options
             -C panic=immediate-abort
@@ -62,6 +81,12 @@ jobs:
             -C target-feature=+crt-static
             -C link-arg=-static
             -C link-arg=-s
+            -C link-arg=-lunwind
+            -C link-arg=-lgcc
+            -C link-arg=-lc
+            -L ${{ env.LIBUNWIND_DIR }}
+            -L ${{ env.MUSL_LIB_DIR }}
+            -L ${{ env.GCC_LIB_DIR }}
             --cfg force_disable_atomic64
 
       - name: Create dirlist snapshot
