@@ -85,7 +85,7 @@ jobs:
             -L $MUSL_LIB_DIR \
             -L $GCC_LIB_DIR \
             -C link-arg=-Wl,--start-group \
-            # -C link-arg=-static \
+            -C link-arg=-static \
             -C link-arg=-lunwind \
             -C link-arg=-lgcc \
             -C link-arg=-lgcc_eh \
