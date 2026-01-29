@@ -44,29 +44,43 @@ jobs:
           # wget -q https://musl.cc/mips-linux-muslsf-cross.tgz
           wget -q  https://github.com/NordSecurity/rust_build_utils/releases/download/mirror_mipsel-linux-muslsf-cross.tgz/mipsel-linux-muslsf-cross.tgz
           tar -xzf mipsel-linux-muslsf-cross.tgz
-          export TOOLCHAIN_PATH=$(pwd)/mipsel-linux-muslsf-cross
-          export PATH="$TOOLCHAIN_PATH/bin:$PATH"
+          TOOLCHAIN_ROOT=$(pwd)/mipsel-linux-muslsf-cross
 
           # 2. Build libunwind (The missing link)
           wget -q https://github.com/libunwind/libunwind/releases/download/v1.8.3/libunwind-1.8.3.tar.gz
           tar -xzf libunwind-1.8.3.tar.gz
           cd libunwind-1.8.3
-          # Fix for Little Endian (MT7620A is mipsel)
           sed -i.bak -e '/^#include <endian.h>/d' -e '/^# if __BYTE_ORDER == __BIG_ENDIAN/,/^# endif/c\# undef __BYTE_ORDER__\n# undef __ORDER_BIG_ENDIAN__\n# define OFFSET 0' src/mips/getcontext.S
-          
-          ./configure --host=mipsel-linux-muslsf --enable-static --disable-coredump --disable-shared CCAS="mipsel-linux-muslsf-gcc" CCASFLAGS="-c"
+          ./configure --host=mipsel-linux-muslsf --enable-static --disable-coredump --disable-shared \
+            CC="$TOOLCHAIN_ROOT/bin/mipsel-linux-muslsf-gcc" \
+            CCAS="$TOOLCHAIN_ROOT/bin/mipsel-linux-muslsf-gcc" \
+            CCASFLAGS="-c"
           make -j$(nproc)
-          export LIBUNWIND_DIR=$(pwd)/src/.libs
+          LIBUNWIND_DIR=$(pwd)/src/.libs
           cd ..
 
           # 3. Path Verification Logic
-          # Find the exact directory containing libgcc.a
-          GCC_LIB_DIR=$(find $TOOLCHAIN_ROOT -name "libgcc.a" -exec dirname {} \;)
-          MUSL_LIB_DIR=$TOOLCHAIN_ROOT/mipsel-linux-muslsf/lib
+          GCC_LIB_DIR=$(find "$TOOLCHAIN_ROOT" -name "libgcc.a" -exec dirname {} \; | head -n 1)
+          MUSL_LIB_DIR="$TOOLCHAIN_ROOT/mipsel-linux-muslsf/lib"
           
-          echo "Verification: GCC_LIB_DIR is $GCC_LIB_DIR"
-          echo "Verification: MUSL_LIB_DIR is $MUSL_LIB_DIR"
-          echo "Verification: LIBUNWIND_PATH is $LIBUNWIND_PATH"
+          echo "Using GCC_LIB_DIR: $GCC_LIB_DIR"
+          echo "Using MUSL_LIB_DIR: $MUSL_LIB_DIR"
+          echo "Using LIBUNWIND_DIR: $LIBUNWIND_DIR"
+          
+          export RUSTFLAGS="-Z unstable-options \
+            -C panic=immediate-abort \
+            -C target-feature=+soft-float \
+            -C link-self-contained=yes \
+            -C target-feature=+crt-static \
+            -C link-arg=-static \
+            -C link-arg=-lunwind \
+            -C link-arg=-lgcc \
+            -C link-arg=-lc \
+            -C link-arg=-s \
+            -L $LIBUNWIND_DIR \
+            -L $MUSL_LIB_DIR \
+            -L $GCC_LIB_DIR \
+            --cfg=force_disable_atomic64"
 
           # 4. Run Build
           cargo build \
@@ -74,23 +88,12 @@ jobs:
             --release \
             -p privaxy-app \
             -Z build-std=std,panic_abort \
+            -Z unstable-options \
             --no-default-features \
             --features "liveview"
         env:
           CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
-          RUSTFLAGS: >
-            -Z unstable-options
-            -C panic=immediate-abort
-            -C target-feature=+soft-float
-            -C link-self-contained=yes
-            -C link-arg=-static
-            -C link-arg=-lunwind
-            -C link-arg=-lgcc
-            -C link-arg=-lc
-            -L ${{ env.LIBUNWIND_PATH }}
-            -L ${{ env.MUSL_LIB_DIR }}
-            -L ${{ env.GCC_LIB_DIR }}
-            --cfg force_disable_atomic64
+          CC_mipsel_unknown_linux_musl: ${{ github.workspace }}/mipsel-linux-muslsf-cross/bin/mipsel-linux-muslsf-gcc
 
       - name: Create dirlist snapshot
         run: |
