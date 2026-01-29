@@ -3,11 +3,6 @@
 use portable_atomic as _;
 
 use dioxus::prelude::*;
-// 2026 Fix: Import the specific trait for the Axum Router extension
-use dioxus::prelude::dioxus_server::DioxusRouterExt;
-// Use ::axum to refer to the external crate unambiguously
-use ::axum::Router;
-
 use privaxy::PrivaxyServer;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -28,6 +23,7 @@ static PRIVAXY_SERVER: GlobalSignal<Option<Arc<RwLock<PrivaxyServer>>>> = Signal
 
 #[tokio::main]
 async fn main() {
+    let _ = std::fs::create_dir_all("/opt/etc/privaxy/public");
     // Initialize logging
     if std::env::var(RUST_LOG_ENV_KEY).is_err() {
         unsafe {

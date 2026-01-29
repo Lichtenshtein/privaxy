@@ -18,7 +18,8 @@ jobs:
         uses: dtolnay/rust-toolchain@nightly
         with:
           # targets: mipsel-unknown-linux-musl
-          components: rust-src
+          components: rust-src clippy
+          override: true
 
       - name: Install Cross-Compilation Toolchain
         run: |
@@ -37,6 +38,11 @@ jobs:
 
       # - name: Install Cross
         # run: cargo install cross --git https://github.com/cross-rs/cross.git
+
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --allow-dirty --fix --all-targets --all-features
 
       - name: Build MIPS Binary
         run: |

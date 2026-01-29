@@ -28,10 +28,6 @@ fn get_configuration_base_path() -> PathBuf {
     PathBuf::from(CONFIGURATION_DIRECTORY_PATH)
 }
 
-fn get_home_directory() -> ConfigurationResult<PathBuf> {
-    Ok(PathBuf::from("/"))
-}
-
 type ConfigurationResult<T> = Result<T, ConfigurationError>;
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]

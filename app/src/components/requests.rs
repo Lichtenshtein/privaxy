@@ -109,7 +109,7 @@ pub fn Requests() -> Element {
                                                 "Waiting for requests..."
                                             }
                                             p { class: "text-sm text-stardust opacity-60",
-                                                "Configure your browser to use http://0.0.0.0:8100 as proxy"
+                                                "Configure your browser to use http://192.168.1.1:8100 as proxy"
                                             }
                                         }
                                     }
