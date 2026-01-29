@@ -292,7 +292,7 @@ impl Configuration {
 }
 
 async fn get_default_filters(
-    http_client: reqwest::Client,
+    _http_client: reqwest::Client,
 ) -> ConfigurationResult<Vec<DefaultFilter>> {
     Ok(vec![
         DefaultFilter {
