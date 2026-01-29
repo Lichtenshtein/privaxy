@@ -34,22 +34,26 @@ async fn main() {
 
     #[cfg(feature = "liveview")]
     {
-        use axum::routing::get;
-        
+        use ::axum::routing::get;
+        use ::axum::response::IntoResponse;
+
         let dioxus_router = dioxus::server::router(App);
 
-        let app = Router::new()
+        let app = ::axum::Router::new()
             .route("/dioxus/index.js", get(|| async {
                 (
-                    [(axum::http::header::CONTENT_TYPE, "application/javascript")],
-                    dioxus::server::index_js(),
-                )
+                    [(::axum::http::header::CONTENT_TYPE, "application/javascript")],
+                    dioxus_liveview::interpreter_js(),
+                ).into_response()
             }))
             .merge(dioxus_router);
 
         let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
+        log::info!("Starting LiveView server on http://{}", addr);
+
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-        axum::serve(listener, app).await.unwrap();
+        
+        ::axum::serve(listener, app.into_make_service()).await.unwrap();
     }
 
     #[cfg(not(feature = "liveview"))]
