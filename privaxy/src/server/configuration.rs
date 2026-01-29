@@ -294,14 +294,6 @@ impl Configuration {
 async fn get_default_filters(
     _http_client: reqwest::Client,
 ) -> ConfigurationResult<Vec<DefaultFilter>> {
-    Ok(vec![
-        DefaultFilter {
-            enabled_by_default: true,
-            file_name: "test_filter.txt".to_string(),
-            group: "default".to_string(),
-            title: "Test Local Filter".to_string(),
-        }
-    ])
     // let base_filters_url = BASE_FILTERS_URL.parse::<Url>().unwrap();
     // let filters_url = base_filters_url.join(METADATA_FILE_NAME).unwrap();
 
@@ -310,6 +302,18 @@ async fn get_default_filters(
     // let default_filters = response.json::<Vec<DefaultFilter>>().await?;
 
     // Ok(default_filters)
+
+    // let filter_url = "https://easylist.to";
+    // let filter = http_client.get(filter_url).send().await?.text().await?;
+
+    Ok(vec![
+        DefaultFilter {
+            enabled_by_default: true,
+            file_name: "easylist.txt".to_string(),
+            group: "Ads".to_string(),
+            title: "EasyList Official".to_string(),
+        }
+    ])
 }
 
 async fn get_filter(

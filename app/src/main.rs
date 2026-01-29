@@ -36,7 +36,11 @@ async fn main() {
     {
         // 2026 Standard: Use dioxus::server::router(App)
         // This returns a standard axum::Router<()> compatible with axum 0.8
-        let app = dioxus::server::router(App);
+        // let app = dioxus::server::router(App);
+
+        let app = Router::new()
+            .serve_dioxus_application(ServeConfigBuilder::new().build(), App)
+            .into_make_service();
 
         let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
         log::info!("Starting LiveView server on http://{}", addr);
