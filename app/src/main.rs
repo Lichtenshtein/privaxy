@@ -6,6 +6,8 @@ use dioxus::prelude::*;
 use privaxy::PrivaxyServer;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+// use axum::Router;
+use dioxus_fullstack::routing::Router;
 
 mod components;
 
