@@ -80,15 +80,18 @@ jobs:
             -C panic=immediate-abort \
             -C target-feature=+soft-float \
             -C link-self-contained=yes \
-            # -C target-feature=+crt-static \
-            -C link-arg=-static \
-            -C link-arg=-lunwind \
-            -C link-arg=-lgcc \
-            -C link-arg=-lc \
-            # -C link-arg=-s \
+            -C target-feature=+crt-static \
             -L $LIBUNWIND_DIR \
             -L $MUSL_LIB_DIR \
             -L $GCC_LIB_DIR \
+            -C link-arg=-Wl,--start-group \
+            # -C link-arg=-static \
+            -C link-arg=-lunwind \
+            -C link-arg=-lgcc \
+            -C link-arg=-lgcc_eh \
+            -C link-arg=-lc \
+            -C link-arg=-s \
+            -C link-arg=-Wl,--end-group \
             --cfg=force_disable_atomic64"
 
           # 4. Run Build
