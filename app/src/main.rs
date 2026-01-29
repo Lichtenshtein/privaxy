@@ -34,28 +34,18 @@ async fn main() {
 
     #[cfg(feature = "liveview")]
     {
-        use ::axum::routing::get;
-        use ::axum::response::IntoResponse;
+        // use ::axum::routing::get;
+        // use ::axum::response::IntoResponse;
 
         let dioxus_router = dioxus::server::router(App);
-
-        let app = ::axum::Router::new()
-            // .route("/dioxus/index.js", get(|| async {
-                // ::axum::response::Response::builder()
-                    // .header("content-type", "application/javascript")
-                    // .body(dioxus_liveview::interpreter_glue("/"))
-                    // .unwrap()
-            // }))
-            .merge(dioxus_router);
+        let app = ::axum::Router::new().merge(dioxus_router);
 
         let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
         log::info!("Starting LiveView server on http://{}", addr);
 
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-
         ::axum::serve(listener, app).await.unwrap();
     }
-
 
     #[cfg(not(feature = "liveview"))]
     dioxus::launch(App);
@@ -138,9 +128,13 @@ fn NotFound(route: Vec<String>) -> Element {
 #[component]
 fn App() -> Element {
     let glue = dioxus_liveview::interpreter_glue("/");
+    
+    let clean_js = glue
+        .replace("<script>", "")
+        .replace("</script>", "");
+
     rsx! {
-        // document::Script { src: "/dioxus/index.js" }
-        document::RawHtml { html: "{glue}" }
+        script { "{clean_js}" }
         Router::<Route> {}
     }
 }
