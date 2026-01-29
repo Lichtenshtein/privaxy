@@ -1,3 +1,5 @@
+Add clippy with --allow-dirty --fix --all-targets params to workflow.yaml below:
+
 name: CI
 on:
   workflow_dispatch:
@@ -18,39 +20,30 @@ jobs:
         uses: dtolnay/rust-toolchain@nightly
         with:
           # targets: mipsel-unknown-linux-musl
-          components: rust-src clippy
-          override: true
+          components: rust-src, clippy
 
       - name: Install Cross-Compilation Toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu libc6-dev-mipsel-cross
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            target
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo
+          key: ${{ matrix.target }}
 
       # - name: Install Cross
         # run: cargo install cross --git https://github.com/cross-rs/cross.git
 
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --allow-dirty --fix --all-targets --all-features
-
-      - name: Build MIPS Binary
+      - name: Prepare Toolchain and libunwind
+        id: prepare
         run: |
           # 1. Download Toolchain
           # wget -q https://musl.cc/mips-linux-muslsf-cross.tgz
           wget -q  https://github.com/NordSecurity/rust_build_utils/releases/download/mirror_mipsel-linux-muslsf-cross.tgz/mipsel-linux-muslsf-cross.tgz
           tar -xzf mipsel-linux-muslsf-cross.tgz
           TOOLCHAIN_ROOT=$(pwd)/mipsel-linux-muslsf-cross
+          echo "TOOLCHAIN_ROOT=$TOOLCHAIN_ROOT" >> $GITHUB_ENV
 
           # 2. Build libunwind (The missing link)
           wget -q https://github.com/libunwind/libunwind/releases/download/v1.8.3/libunwind-1.8.3.tar.gz
@@ -71,17 +64,34 @@ jobs:
           make -C src -j$(nproc)
           
           # The .libs directory will be inside 'src'
-          LIBUNWIND_DIR=$(pwd)/src/.libs
+          echo "LIBUNWIND_DIR=$(pwd)/src/.libs" >> $GITHUB_ENV
           cd ..
 
-          # 3. Resolve exact absolute paths
+          # 3. Export Paths for Linker
           GCC_LIB_DIR=$(find "$TOOLCHAIN_ROOT" -name "libgcc.a" -exec dirname {} \; | head -n 1)
-          MUSL_LIB_DIR="$TOOLCHAIN_ROOT/mipsel-linux-muslsf/lib"
+          echo "GCC_LIB_DIR=$GCC_LIB_DIR" >> $GITHUB_ENV
+          echo "MUSL_LIB_DIR=$TOOLCHAIN_ROOT/mipsel-linux-muslsf/lib" >> $GITHUB_ENV
+
+          # Ensure libgcc_eh exists for the linker
+          ln -s "$GCC_LIB_DIR/libgcc.a" "$GCC_LIB_DIR/libgcc_eh.a" || true
           
-          echo "Using GCC_LIB_DIR: $GCC_LIB_DIR"
-          echo "Using MUSL_LIB_DIR: $MUSL_LIB_DIR"
-          echo "Using LIBUNWIND_DIR: $LIBUNWIND_DIR"
-          
+      - name: Run Clippy Fix
+        run: |
+          cargo clippy \
+            --fix --allow-dirty \
+            --target mipsel-unknown-linux-musl \
+            --all-targets \
+            -p privaxy-app \
+            -Z build-std=std,panic_abort \
+            --no-default-features \
+            --features "liveview" \
+            -- -D warnings
+        env:
+          CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
+          RUSTFLAGS: "-Z unstable-options --cfg=force_disable_atomic64"
+
+      - name: Build MIPS Binary
+        run: |
           export RUSTFLAGS="-Z unstable-options \
             -C panic=immediate-abort \
             -C target-feature=+mips32 \
@@ -103,10 +113,6 @@ jobs:
             -C link-arg=--end-group \
             --cfg=force_disable_atomic64"
 
-          # Ensure libgcc_eh exists for the linker
-          ln -s "$GCC_LIB_DIR/libgcc.a" "$GCC_LIB_DIR/libgcc_eh.a" || true
-          
-          # 4. Run Build
           cargo build \
             --target mipsel-unknown-linux-musl \
             --release \
@@ -117,8 +123,8 @@ jobs:
             --features "liveview"
         env:
           CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
-          CC_mipsel_unknown_linux_musl: ${{ github.workspace }}/mipsel-linux-muslsf-cross/bin/mipsel-linux-muslsf-gcc
-          AR_mipsel_unknown_linux_musl: ${{ github.workspace }}/mipsel-linux-muslsf-cross/bin/mipsel-linux-muslsf-ar
+          CC_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-gcc
+          AR_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-ar
 
       - name: Create dirlist snapshot
         run: |
