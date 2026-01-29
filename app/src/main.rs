@@ -41,10 +41,10 @@ async fn main() {
 
         let app = ::axum::Router::new()
             .route("/dioxus/index.js", get(|| async {
-                (
-                    [(::axum::http::header::CONTENT_TYPE, "application/javascript")],
-                    dioxus_server::prelude::index_js(),
-                ).into_response()
+                ::axum::response::Response::builder()
+                    .header("content-type", "application/javascript")
+                    .body(dioxus_liveview::interpreter_glue("/"))
+                    .unwrap()
             }))
             .merge(dioxus_router);
 
@@ -52,9 +52,10 @@ async fn main() {
         log::info!("Starting LiveView server on http://{}", addr);
 
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-        
-        ::axum::serve(listener, app.into_make_service()).await.unwrap();
+
+        ::axum::serve(listener, app).await.unwrap();
     }
+
 
     #[cfg(not(feature = "liveview"))]
     dioxus::launch(App);
