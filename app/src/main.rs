@@ -43,7 +43,7 @@ async fn main() {
             .route("/dioxus/index.js", get(|| async {
                 (
                     [(::axum::http::header::CONTENT_TYPE, "application/javascript")],
-                    dioxus_liveview::interpreter_js(),
+                    dioxus_server::prelude::index_js(),
                 ).into_response()
             }))
             .merge(dioxus_router);
