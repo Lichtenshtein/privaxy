@@ -20,7 +20,7 @@ use components::nav::Navigation;
 use components::requests::{start_request_listener, Requests};
 use components::settings::{CustomFilters, Exclusions, Settings};
 
-const STYLES: Asset = asset!("/assets/styles.css");
+const STYLES_RAW: &str = include_str!("../assets/styles.css");
 const RUST_LOG_ENV_KEY: &str = "RUST_LOG";
 
 // Global state for the privaxy server
@@ -86,7 +86,7 @@ fn MainLayout() -> Element {
             if PRIVAXY_SERVER.read().is_none() {
                 log::info!("Starting Privaxy server...");
                 let server = privaxy::start_privaxy().await;
-                log::info!("Privaxy server started on http://127.0.0.1:8100");
+                log::info!("Privaxy server started on http://0.0.0.0:8100");
                 *PRIVAXY_SERVER.write() = Some(Arc::new(RwLock::new(server)));
                 
                 // Start the global request listener
@@ -96,7 +96,8 @@ fn MainLayout() -> Element {
     });
 
     rsx! {
-        document::Link { rel: "stylesheet", href: STYLES }
+        style { "{STYLES_RAW}" }
+        
         div { class: "min-h-screen bg-galaxy",
             Navigation {}
             main { class: "container mx-auto px-4 sm:px-6 lg:px-8 py-8",

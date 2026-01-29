@@ -38,9 +38,12 @@ pub(crate) async fn serve(
 ) -> Result<Response<BoxBodyType>, hyper::Error> {
     // Check if this is a direct request to the proxy itself (not a proxy request)
     // This happens with PAC file checks, WPAD, or direct browser access
-    let is_direct_proxy_request = authority.host() == "127.0.0.1" || 
-                                   authority.host() == "localhost" ||
-                                   authority.host() == "::1";
+
+    let is_direct_proxy_request = authority.host() == "0.0.0.0";
+
+    // let is_direct_proxy_request = authority.host() == "127.0.0.1" || 
+                                   // authority.host() == "localhost" ||
+                                   // authority.host() == "::1";
     
     if is_direct_proxy_request && authority.port_u16() == Some(8100) {
         // Return a simple status page for direct requests to the proxy

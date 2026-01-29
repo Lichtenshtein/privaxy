@@ -77,26 +77,25 @@ jobs:
           echo "Using LIBUNWIND_DIR: $LIBUNWIND_DIR"
           
           export RUSTFLAGS="-Z unstable-options \
-            -Z stack-protector=none \
             -C panic=immediate-abort \
-            -C target-cpu=mips32r2 \
-            -C target-feature=+mips32r2,+soft-float \
+            -C target-feature=+mips32 \
+            -C target-cpu=mips32 \
+            -C target-feature=+soft-float \
             -C link-self-contained=yes \
             -C target-feature=+crt-static \
-            -C link-arg=-static \
             -L $LIBUNWIND_DIR \
             -L $MUSL_LIB_DIR \
             -L $GCC_LIB_DIR \
             -C link-arg=--start-group \
+            -C link-arg=-static \
             -C link-arg=-lunwind \
             -C link-arg=-lunwind-mips \
             -C link-arg=-lgcc \
             -C link-arg=-lgcc_eh \
             -C link-arg=-lc \
+            -C link-arg=-s \
             -C link-arg=--end-group \
-            --cfg=force_disable_atomic64 \
-            --cfg=portable_atomic_unsafe_assume_single_core \
-            -C target-feature=+crt-static"
+            --cfg=force_disable_atomic64"
 
           # Ensure libgcc_eh exists for the linker
           ln -s "$GCC_LIB_DIR/libgcc.a" "$GCC_LIB_DIR/libgcc_eh.a" || true
