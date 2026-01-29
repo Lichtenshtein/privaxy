@@ -42,6 +42,7 @@ jobs:
           tar -xzf mipsel-linux-muslsf-cross.tgz
           TOOLCHAIN_ROOT=$(pwd)/mipsel-linux-muslsf-cross
           echo "TOOLCHAIN_ROOT=$TOOLCHAIN_ROOT" >> $GITHUB_ENV
+          echo "${{ env.TOOLCHAIN_ROOT }}/bin" >> $GITHUB_PATH
 
           # 2. Build libunwind (The missing link)
           wget -q https://github.com/libunwind/libunwind/releases/download/v1.8.3/libunwind-1.8.3.tar.gz
@@ -85,6 +86,9 @@ jobs:
             --features "liveview" \
             -- -D warnings
         env:
+          CC_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-gcc
+          AR_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-ar
+          CC: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-gcc
           CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
           RUSTFLAGS: "-Z unstable-options --cfg=force_disable_atomic64"
 
