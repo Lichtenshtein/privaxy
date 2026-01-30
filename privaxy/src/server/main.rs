@@ -3,7 +3,7 @@ use std::time::Duration;
 
 const RUST_LOG_ENV_KEY: &str = "RUST_LOG";
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     if std::env::var(RUST_LOG_ENV_KEY).is_err() {
         // SAFETY: We're setting this env var before any threads are spawned,

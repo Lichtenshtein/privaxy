@@ -5,15 +5,17 @@ edition = "2024"
 
 [dependencies]
 dioxus = { version = "0.7.3", default-features = false, features = ["liveview", "router", "fullstack", "macro", "signals", "asset", "document", "html", "hooks", "server"] }
-axum = "0.8"
+axum = { version = "0.8", features = ["ws"] }
 dioxus-fullstack = "0.7.3"
 dioxus-liveview = { version = "0.7.3", features = ["axum"] }
 
 # tokio = { version = "1.43", features = ["full"] }
-tokio = { version = "1.43", features = ["rt-multi-thread", "net", "time", "macros", "fs"] }
+tokio = { version = "1.43", features = ["rt", "net", "time", "macros", "fs"] }
+tokio-tungstenite = "0.26"
+futures-util = "0.3"
 
 # Use rustls-tls-manual-roots (native-roots often fails on minimal router firmwares)
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-webpki-roots", "json"] }
 
 # Other dependencies...
 base64 = "0.22"

@@ -74,7 +74,7 @@ pub struct CertCache {
 }
 
 impl CertCache {
-    pub fn new(ca_cert_pem: &str, ca_key_pem: &str) -> Self {
+    pub fn new(_ca_cert_pem: &str, ca_key_pem: &str) -> Self {
         let ca_key = KeyPair::from_pem(ca_key_pem).expect("Invalid CA Key");
 
         let mut params = CertificateParams::new(vec!["Privaxy CA".to_string()]).unwrap();

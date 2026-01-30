@@ -1,16 +1,14 @@
 #![allow(non_snake_case)]
+#[allow(unused_imports)]
 #[cfg(all(target_arch = "mips", target_endian = "little"))]
 use portable_atomic as _;
 
 use dioxus::prelude::*;
-// 2026 Fix: Import the specific trait for the Axum Router extension
-use dioxus::prelude::dioxus_server::DioxusRouterExt;
-// Use ::axum to refer to the external crate unambiguously
-use ::axum::Router;
-
 use privaxy::PrivaxyServer;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+// use crate::ServeConfig;
+use dioxus::prelude::ServeConfig;
 
 mod components;
 
@@ -20,14 +18,16 @@ use components::nav::Navigation;
 use components::requests::{start_request_listener, Requests};
 use components::settings::{CustomFilters, Exclusions, Settings};
 
-const STYLES: Asset = asset!("/assets/styles.css");
+const STYLES_RAW: &str = include_str!("../assets/styles.css");
 const RUST_LOG_ENV_KEY: &str = "RUST_LOG";
 
 // Global state for the privaxy server
 static PRIVAXY_SERVER: GlobalSignal<Option<Arc<RwLock<PrivaxyServer>>>> = Signal::global(|| None);
 
-#[tokio::main]
-async fn main() {
+// #[tokio::main(flavor = "current_thread")]
+// async fn main() {
+async fn run_app() {
+    let _ = std::fs::create_dir_all("/opt/etc/privaxy/public");
     // Initialize logging
     if std::env::var(RUST_LOG_ENV_KEY).is_err() {
         unsafe {
@@ -38,21 +38,62 @@ async fn main() {
 
     #[cfg(feature = "liveview")]
     {
-        // 2026 Standard: Use dioxus::server::router(App)
-        // This returns a standard axum::Router<()> compatible with axum 0.8
-        let app = dioxus::server::router(App);
+        use ::axum::routing::get;
+        use ::axum::extract::ws::WebSocketUpgrade;
+        use ::axum::response::Html;
+
+        let pool = dioxus_liveview::LiveViewPool::new();
+
+        let app = ::axum::Router::new()
+            .route("/", get(|| async {
+                Html(format!(
+                    r#"<!DOCTYPE html>
+                    <html>
+                        <head>
+                            <title>Privaxy</title>
+                            <meta name="viewport" content="width=device-width, initial-scale=1">
+                        </head>
+                        <body>
+                            <div id="main"></div>
+                            {}
+                        </body>
+                    </html>"#,
+                    dioxus_liveview::interpreter_glue("/_liveview")
+                ))
+            }))
+            .route("/_liveview", get(move |ws: WebSocketUpgrade| async move {
+                ws.on_upgrade(move |socket| async move {
+                    let _ = pool.launch(dioxus_liveview::axum_socket(socket), App).await;
+                })
+            }));
 
         let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
-        log::info!("Starting LiveView server on http://{}", addr);
-
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-
-        // Disambiguate call to serve using the top-level ::axum
-        ::axum::serve(listener, app.into_make_service()).await.unwrap();
+        ::axum::serve(listener, app).await.unwrap();
     }
 
-    #[cfg(not(feature = "liveview"))]
-    dioxus::launch(App);
+    // #[cfg(not(feature = "liveview"))]
+    // dioxus::launch(App);
+}
+
+fn main() {
+    let stack_size = 256 * 1024;
+
+    let thread = std::thread::Builder::new()
+        .name("main-logic".to_string())
+        .stack_size(stack_size)
+        .spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .thread_stack_size(stack_size)
+                .build()
+                .unwrap();
+
+            rt.block_on(run_app());
+        })
+        .unwrap();
+
+    thread.join().unwrap();
 }
 
 #[derive(Debug, Clone, Routable, PartialEq)]
@@ -86,7 +127,7 @@ fn MainLayout() -> Element {
             if PRIVAXY_SERVER.read().is_none() {
                 log::info!("Starting Privaxy server...");
                 let server = privaxy::start_privaxy().await;
-                log::info!("Privaxy server started on http://127.0.0.1:8100");
+                log::info!("Privaxy server started on http://0.0.0.0:8100");
                 *PRIVAXY_SERVER.write() = Some(Arc::new(RwLock::new(server)));
                 
                 // Start the global request listener
@@ -96,7 +137,8 @@ fn MainLayout() -> Element {
     });
 
     rsx! {
-        document::Link { rel: "stylesheet", href: STYLES }
+        style { "{STYLES_RAW}" }
+
         div { class: "min-h-screen bg-galaxy",
             Navigation {}
             main { class: "container mx-auto px-4 sm:px-6 lg:px-8 py-8",

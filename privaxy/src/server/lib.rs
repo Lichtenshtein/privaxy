@@ -50,6 +50,7 @@ pub async fn start_privaxy() -> PrivaxyServer {
     // to handle compression as well as offers a more convenient interface.
     let client = reqwest::Client::builder()
         .use_rustls_tls()
+        .danger_accept_invalid_certs(true)
         .redirect(Policy::none())
         .no_proxy()
         .gzip(true)
@@ -133,9 +134,16 @@ let cert_cache = cert::CertCache::new(&ca_certificate_pem, &ca_private_key_pem);
     let active_connections = Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
     tokio::spawn(async move {
-        let listener = TcpListener::bind(proxy_server_addr).await.unwrap();
-        log::info!("Proxy available at http://{}", proxy_server_addr);
+        let listener = match TcpListener::bind(proxy_server_addr).await {
+            Ok(l) => l,
+            Err(e) => {
+                log::error!("FATAL: Could not bind proxy server to {}: {}", proxy_server_addr, e);
+                log::error!("Check if another instance of privaxy is running.");
+                return;
+            }
+        };
 
+    log::info!("Proxy available at http://{}", proxy_server_addr);
         loop {
             let (stream, client_addr) = match listener.accept().await {
                 Ok(conn) => conn,

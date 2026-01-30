@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use privaxy::events::Event;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-const MAX_REQUESTS_SHOWN: usize = 500;
+const MAX_REQUESTS_SHOWN: usize = 100;
 
 // Global signal to persist requests across navigation
 static REQUESTS: GlobalSignal<Vec<RequestEvent>> = Signal::global(Vec::new);
@@ -109,7 +109,7 @@ pub fn Requests() -> Element {
                                                 "Waiting for requests..."
                                             }
                                             p { class: "text-sm text-stardust opacity-60",
-                                                "Configure your browser to use http://127.0.0.1:8100 as proxy"
+                                                "Configure your browser to use http://192.168.1.1:8100 as proxy"
                                             }
                                         }
                                     }

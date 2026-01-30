@@ -6,9 +6,11 @@ jobs:
   build-mipsel:
     name: Build for Mipsel (GNU/Padavan)
     runs-on: ubuntu-latest
+    env:
+      RUST_MIN_STACK: 2097152
     strategy:
       matrix:
-        target: [mipsel-unknown-linux-gnu]
+        target: [mipsel-unknown-linux-musl]
 
     steps:
       - name: Checkout
@@ -17,121 +19,167 @@ jobs:
       - name: Install Rust Nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: rust-src
+          # targets: mipsel-unknown-linux-musl
+          components: rust-src, clippy
 
       - name: Install Cross-Compilation Toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu libc6-dev-mipsel-cross
 
-      - name: Cache Cargo
-        uses: actions/cache@v4
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            target
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo
+          key: ${{ matrix.target }}
 
       # - name: Install Cross
         # run: cargo install cross --git https://github.com/cross-rs/cross.git
 
+      - name: Prepare Toolchain and libunwind
+        id: prepare
+        run: |
+          # 1. Download Toolchain
+          # wget -q https://musl.cc/mips-linux-muslsf-cross.tgz
+          wget -q  https://github.com/NordSecurity/rust_build_utils/releases/download/mirror_mipsel-linux-muslsf-cross.tgz/mipsel-linux-muslsf-cross.tgz
+          tar -xzf mipsel-linux-muslsf-cross.tgz
+          TOOLCHAIN_ROOT=$(pwd)/mipsel-linux-muslsf-cross
+          # echo "TOOLCHAIN_ROOT=$TOOLCHAIN_ROOT" >> $GITHUB_ENV
+          # echo "${{ env.TOOLCHAIN_ROOT }}/bin" >> $GITHUB_PATH
+
+          # 2. Export Paths for Linker
+          # find GCC_LIB_DIR (libgcc.a and crtbegin.o)
+          GCC_DIR=$(find "$TOOLCHAIN_ROOT" -name "libgcc.a" -exec dirname {} \; | head -n 1)
+          # find MUSL_LIB_DIR (libc.a and crt1.o)
+          MUSL_DIR="$TOOLCHAIN_ROOT/mipsel-linux-muslsf/lib"
+
+          echo "TOOLCHAIN_ROOT=$TOOLCHAIN_ROOT" >> $GITHUB_ENV
+          echo "GCC_LIB_DIR=$GCC_DIR" >> $GITHUB_ENV
+          echo "MUSL_LIB_DIR=$MUSL_DIR" >> $GITHUB_ENV
+
+          # 3. Build libunwind (The missing link)
+          wget -q https://github.com/libunwind/libunwind/releases/download/v1.8.3/libunwind-1.8.3.tar.gz
+          tar -xzf libunwind-1.8.3.tar.gz
+          cd libunwind-1.8.3
+
+          # patch for MIPS
+          sed -i.bak -e '/^#include <endian.h>/d' -e '/^# if __BYTE_ORDER == __BIG_ENDIAN/,/^# endif/c\# undef __BYTE_ORDER__\n# undef __ORDER_BIG_ENDIAN__\n# define OFFSET 0' src/mips/getcontext.S
+
+          ./configure --host=mipsel-linux-muslsf \
+            --enable-static \
+            --disable-coredump \
+            --disable-shared \
+            --disable-tests \
+            CC="$TOOLCHAIN_ROOT/bin/mipsel-linux-muslsf-gcc" \
+            CCAS="$TOOLCHAIN_ROOT/bin/mipsel-linux-muslsf-gcc" \
+            CCASFLAGS="-c"
+
+          # Only build the 'src' directory to avoid compiling broken tests
+          make -C src -j$(nproc)
+
+          # The .libs directory will be inside 'src'
+          UNWIND_PATH=$(pwd)/src/.libs
+          echo "LIBUNWIND_DIR=$UNWIND_PATH" >> $GITHUB_ENV
+
+          # Check if libunwind is static. .a file must persist
+          if [ -f "$UNWIND_PATH/libunwind.a" ]; then
+            echo "Libunwind build success!"
+          else
+            echo "Libunwind NOT FOUND in $UNWIND_PATH"
+            ls -R src/.libs
+            exit 1
+          fi
+
+          cd ..
+
+      - name: Verify Paths
+        run: |
+          echo "Checking: $MUSL_LIB_DIR/libc.a"
+          ls -l "$MUSL_LIB_DIR/libc.a"
+          echo "Checking: $LIBUNWIND_DIR/libunwind.a"
+          ls -l "$LIBUNWIND_DIR/libunwind.a"
+
+          # Ensure libgcc_eh exists for the linker
+          ln -s "$GCC_LIB_DIR/libgcc.a" "$GCC_LIB_DIR/libgcc_eh.a" || true
+
+      - name: Run Clippy Fix
+        run: |
+          cargo clippy \
+            --fix --allow-dirty \
+            --target mipsel-unknown-linux-musl \
+            --all-targets \
+            -p privaxy-app \
+            -Z build-std=std,panic_abort \
+            --no-default-features \
+            --features "liveview" \
+            -- -D warnings
+        env:
+          CC_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-gcc
+          CXX_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-g++
+          # CMake переменные для aws-lc-sys
+          CMAKE_C_COMPILER_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-gcc
+          CMAKE_CXX_COMPILER_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-g++
+          RUSTFLAGS: "-Z unstable-options --cfg=force_disable_atomic64 --cfg=ring_force_no_asm --cfg=tokio_unstable"
+
       - name: Build MIPS Binary
         run: |
+          TOOLCHAIN_BIN=${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-gcc
+
+          export RUSTFLAGS="-Z unstable-options \
+            -C panic=immediate-abort \
+            -C target-cpu=mips32r2 \
+            -C target-feature=+mips32r2,+soft-float,+crt-static \
+            -C linker=$TOOLCHAIN_BIN \
+            -C force-unwind-tables=no \
+            -C embed-bitcode=yes \
+            -C link-self-contained=no \
+            -C link-arg=-static \
+            -C link-arg=-Wl,-Bstatic \
+            -C link-arg=-static-libgcc \
+            -C link-arg=-L${{ env.MUSL_LIB_DIR }} \
+            -C link-arg=-L${{ env.GCC_LIB_DIR }} \
+            -C link-arg=-L${{ env.LIBUNWIND_DIR }} \
+            -C link-arg=-Wl,--start-group \
+            -C link-arg=-lunwind \
+            -C link-arg=-lunwind-mips \
+            -C link-arg=-lgcc \
+            -C link-arg=-lgcc_eh \
+            -C link-arg=-lc \
+            -C link-arg=-s \
+            -C link-arg=-Wl,--end-group \
+            --cfg=force_disable_atomic64 \
+            --cfg=tokio_unstable \
+            --cfg=ring_force_no_asm"
+
           cargo build \
-            --target ${{ matrix.target }} \
+            --target mipsel-unknown-linux-musl \
             --release \
             -p privaxy-app \
             -Z build-std=std,panic_abort \
             --no-default-features \
             --features "liveview"
         env:
-          CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER: mipsel-linux-gnu-gcc
-          CC_mipsel_unknown_linux_gnu: mipsel-linux-gnu-gcc
-          CXX_mipsel_unknown_linux_gnu: mipsel-linux-gnu-g++
-          PKG_CONFIG_ALLOW_CROSS: 1
-          # ANY_PLATFORM_FOR_AWS_LC_SYS=1
+          RUST_BACKTRACE: 0
+          CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_MUSL_RUSTFLAGS: "-C target-feature=+crt-static"
+          CC_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-gcc
+          CXX_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-g++
+          CMAKE_C_COMPILER_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-gcc
+          CMAKE_CXX_COMPILER_mipsel_unknown_linux_musl: ${{ env.TOOLCHAIN_ROOT }}/bin/mipsel-linux-muslsf-g++
 
       - name: Create dirlist snapshot
+        if: always()
         run: |
-          find . -print | sed -e 's;[^/]*/;|___;g;s;___|; |;g' > ./post-dir-tree.txt
-          find . -type f -o -type d > ./dir-files.txt
+          # Check if output file actually static built
+          file target/${{ matrix.target }}/release/privaxy-app
+
+          mkdir -p ./output-artifacts
+          cp target/${{ matrix.target }}/release/privaxy-app ./output-artifacts/ || true
+
+          find . -maxdepth 4 -not -path '*/.*' > ./output-artifacts/dir-files.txt
+          tree . -L 4 > ./output-artifacts/post-dir-tree.txt || ls -R . > ./output-artifacts/post-dir-tree.txt
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: dioxus-mipsel-musl-binary
-          path: |
-            target/${{ matrix.target }}/release/privaxy-app
-            ./post-dir-tree.txt
-            ./dir-files.txt
-
-  # ci:
-    # name: CI
-    # needs: build-mipsel
-    # runs-on: ${{ matrix.os }}
-    # strategy:
-      # matrix:
-        # include:
-          # - build: linux
-            # os: ubuntu-latest
-            # rust: nightly
-            # target: mipsel-unknown-linux-gnu
-    # steps:
-      # - name: Checkout
-        # uses: actions/checkout@v4
-
-      # - name: Cache build artifacts
-        # uses: actions/cache@v3
-        # with:
-          # key:  no_gui-${{ matrix.os }}-${{ matrix.target }}-artifacts
-          # path: |
-            # ./target
-            # ~/.cargo
-
-      # - name: Install rust
-        # uses: actions-rs/toolchain@v1
-        # with:
-          # toolchain: ${{ matrix.rust }}
-          # profile: minimal
-          # override: true
-
-      # - name: Install cross build dependencies
-        # if: matrix.target == 'aarch64-unknown-linux-gnu'
-        # run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross
-
-      # - name: Install cross build dependencies
-        # if: matrix.target == 'mipsel-unknown-linux-gnu'
-        # run: sudo apt-get update && sudo apt-get install -y gcc-mipsel-linux-gnu g++-mipsel-linux-gnu
-
-      # - name: Install rust target
-        # run: |
-          # rustc --print=target-list
-          # rustup default nightly
-
-      # - name: Set up Docker
-        # uses: docker/setup-qemu-action@v3
-        # with:
-          # platforms: all
-
-      # - name: Cross compile to mipsel
-        # uses: actions-rs/cargo@v1
-        # with:
-          # use-cross: true
-          # command: build
-          # args: --target mipsel-unknown-linux-gnu --release -Zbuild-std --bin privaxy --target-dir target
-
-      # - uses: actions/upload-artifact@v4
-        # if: matrix.os != 'windows-latest'
-        # with:
-          # name: privaxy_nogui-${{ matrix.target }}
-          # path: |
-            # target/${{ matrix.target }}/release/privaxy
-
-      # - uses: actions/upload-artifact@v4
-        # if: matrix.os == 'windows-latest'
-        # with:
-          # name: privaxy_nogui-${{ matrix.target }}
-          # path: |
-            # target/${{ matrix.target }}/release/*
+          path: ./output-artifacts/

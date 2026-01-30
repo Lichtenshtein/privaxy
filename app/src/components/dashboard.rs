@@ -5,6 +5,8 @@ use privaxy::statistics::SerializableStatistics;
 
 #[component]
 pub fn Dashboard() -> Element {
+    let mut count = use_signal(|| 0);
+
     let mut stats = use_signal(|| SerializableStatistics {
         proxied_requests: 0,
         blocked_requests: 0,
@@ -16,6 +18,22 @@ pub fn Dashboard() -> Element {
     let mut blocking_enabled = use_signal(|| true);
     // Store the PEM as a signal so the UI can create a download link
     let mut ca_pem = use_signal(|| String::new());
+
+    let mut is_updating = use_signal(|| false);
+
+    let update_filters = move |_| {
+        spawn(async move {
+            is_updating.set(true);
+            if let Some(server) = use_privaxy_server() {
+                let server = server.read().await;
+                if let Ok(config) = privaxy::configuration::Configuration::read_from_home(reqwest::Client::new()).await {
+                     let _ = server.configuration_updater_sender.send(config).await;
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            is_updating.set(false);
+        });
+    };
 
     use_effect(move || {
         spawn(async move {
@@ -90,6 +108,20 @@ pub fn Dashboard() -> Element {
                         }
                         "Download CA Certificate"
                     }
+                    button {
+                        class: "btn-cosmic flex items-center gap-2",
+                        disabled: *is_updating.read(),
+                        onclick: update_filters,
+                        if *is_updating.read() {
+                            "Updating..."
+                        } else {
+                            svg {
+                                class: "w-5 h-5", fill: "none", stroke: "currentColor", view_box: "0 0 24 24",
+                                path { stroke_linecap: "round", stroke_linejoin: "round", stroke_width: "2", d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" }
+                            }
+                            "Update Filters"
+                        }
+                    }
 
                     if *blocking_enabled.read() {
                         button { class: "btn-danger flex items-center gap-2", onclick: toggle_blocking,
@@ -113,6 +145,15 @@ pub fn Dashboard() -> Element {
                 // Top Blocked Paths and Top Clients lists...
                 // (Keep the list logic as it was)
             }
+            div {
+                h1 { "Dashboard" }
+                button {
+                    class: "p-2 bg-blue-500 text-white rounded",
+                    onclick: move |_| count += 1,
+                    "Debug Counter: {count}"
+                }
+            }
+
         }
     }
 }

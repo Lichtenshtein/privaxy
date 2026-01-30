@@ -443,6 +443,10 @@ textarea::placeholder {
   gap: 0.5rem;
 }
 
+.table-cosmic tr.blocked {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
 .live-dot {
   width: 10px;
   height: 10px;

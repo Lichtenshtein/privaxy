@@ -1,7 +1,7 @@
 use crate::{
     blocker::AdblockRequester, ca::make_ca_certificate, proxy::exclusions::LocalExclusionStore,
 };
-use dirs::home_dir;
+// use dirs::home_dir;
 use futures::future::{try_join_all, AbortHandle, Abortable};
 // REMOVED: openssl imports
 use serde::{Deserialize, Serialize};
@@ -14,14 +14,19 @@ use url::Url;
 
 const BASE_FILTERS_URL: &str = "https://filters.privaxy.net";
 const METADATA_FILE_NAME: &str = "metadata.json";
-const CONFIGURATION_DIRECTORY_NAME: &str = "/opt/etc/privaxy";
-const CONFIGURATION_FILE_NAME: &str = "config";
-const FILTERS_DIRECTORY_NAME: &str = "/opt/etc/privaxy/filters";
+const CONFIGURATION_DIRECTORY_PATH: &str = "/opt/etc/privaxy";
+const CONFIGURATION_FILE_NAME: &str = "config.toml";
+const FILTERS_DIRECTORY_NAME: &str = "filters";
 
 // Update filters every 10 minutes.
 // const FILTERS_UPDATE_AFTER: Duration = Duration::from_secs(60 * 10);
 // Make an update every 5 days
-const FILTERS_UPDATE_AFTER: Duration = Duration::from_days(5);
+// const FILTERS_UPDATE_AFTER: Duration = Duration::from_days(5);
+const FILTERS_UPDATE_AFTER: Duration = Duration::from_secs(5 * 24 * 60 * 60);
+
+fn get_configuration_base_path() -> PathBuf {
+    PathBuf::from(CONFIGURATION_DIRECTORY_PATH)
+}
 
 type ConfigurationResult<T> = Result<T, ConfigurationError>;
 
@@ -33,6 +38,7 @@ pub enum FilterGroup {
     Privacy,
     Malware,
     Social,
+    Other,
 }
 
 #[derive(Deserialize)]
@@ -55,34 +61,29 @@ impl Filter {
     async fn update(&self, http_client: &reqwest::Client) -> ConfigurationResult<String> {
         log::debug!("Updating filter: {}", self.title);
 
-        let home_directory = get_home_directory()?;
-        let configuration_directory = home_directory.join(CONFIGURATION_DIRECTORY_NAME);
+        let configuration_directory = get_configuration_base_path();
         let filters_directory = configuration_directory.join(FILTERS_DIRECTORY_NAME);
 
         fs::create_dir_all(&filters_directory).await?;
-
         let filter = get_filter(&self.file_name, http_client).await?;
-
         fs::write(filters_directory.join(&self.file_name), &filter).await?;
 
         Ok(filter)
     }
 
     pub async fn get_contents(&self, http_client: &reqwest::Client) -> ConfigurationResult<String> {
-        let filter_path = get_home_directory()?
-            .join(CONFIGURATION_DIRECTORY_NAME)
+        let filter_path = get_configuration_base_path()
             .join(FILTERS_DIRECTORY_NAME)
             .join(&self.file_name);
 
-        match fs::read(filter_path).await {
-            Err(err) => {
-                if err.kind() == std::io::ErrorKind::NotFound {
-                    self.update(http_client).await
-                } else {
-                    Err(ConfigurationError::FileSystemError(err))
-                }
+        let read_result: std::io::Result<Vec<u8>> = fs::read(&filter_path).await;
+
+        match read_result {
+            Ok(bytes) => Ok(std::str::from_utf8(&bytes)?.to_string()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                self.update(http_client).await
             }
-            Ok(filter) => Ok(std::str::from_utf8(&filter)?.to_string()),
+            Err(err) => Err(ConfigurationError::FileSystemError(err)),
         }
     }
 }
@@ -92,14 +93,14 @@ impl From<DefaultFilter> for Filter {
         Self {
             enabled: default_filter.enabled_by_default,
             title: default_filter.title,
-            group: match default_filter.group.as_str() {
-                "default" => FilterGroup::Default,
+            group: match default_filter.group.to_lowercase().as_str() {
+                "default"  => FilterGroup::Default,
                 "regional" => FilterGroup::Regional,
-                "ads" => FilterGroup::Ads,
-                "privacy" => FilterGroup::Privacy,
-                "malware" => FilterGroup::Malware,
-                "social" => FilterGroup::Social,
-                _ => unreachable!(),
+                "ads"      => FilterGroup::Ads,
+                "privacy"  => FilterGroup::Privacy,
+                "malware"  => FilterGroup::Malware,
+                "social"   => FilterGroup::Social,
+                _          => FilterGroup::Default,
             },
             file_name: default_filter.file_name,
         }
@@ -124,6 +125,8 @@ pub struct Configuration {
 pub enum ConfigurationError {
     #[error("an error occured while trying to deserialize configuration file")]
     DeserializeError(#[from] toml::de::Error),
+    #[error("an error occured while trying to serialize configuration file")]
+    SerializeError(#[from] toml::ser::Error),
     #[error("this user home directory not found")]
     HomeDirectoryNotFound,
     #[error("file system error")]
@@ -139,15 +142,14 @@ pub enum ConfigurationError {
 
 impl Configuration {
     pub async fn read_from_home(http_client: reqwest::Client) -> ConfigurationResult<Self> {
-        let home_directory = get_home_directory()?;
-        let configuration_directory = home_directory.join(CONFIGURATION_DIRECTORY_NAME);
+        let configuration_directory = get_configuration_base_path();
         let configuration_file_path = configuration_directory.join(CONFIGURATION_FILE_NAME);
 
         if let Err(err) = fs::metadata(&configuration_directory).await {
             if err.kind() == std::io::ErrorKind::NotFound {
                 log::debug!("Configuration directory not found, creating one");
 
-                fs::create_dir(&configuration_directory).await?;
+                fs::create_dir_all(&configuration_directory).await?;
 
                 let configuration = Self::new_default(http_client).await?;
                 configuration.save().await?;
@@ -160,27 +162,24 @@ impl Configuration {
 
         match fs::read(&configuration_file_path).await {
             Ok(bytes) => Ok(toml::from_slice(&bytes)?),
-            Err(err) => {
-                log::debug!("Configuration file not found, creating one");
-
-                if err.kind() == std::io::ErrorKind::NotFound {
-                    let configuration = Self::new_default(http_client).await?;
-                    configuration.save().await?;
-
-                    Ok(configuration)
-                } else {
-                    Err(ConfigurationError::FileSystemError(err))
-                }
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                let configuration = Self::new_default(http_client).await?;
+                configuration.save().await?;
+                Ok(configuration)
             }
+            Err(err) => Err(ConfigurationError::FileSystemError(err)),
         }
     }
 
     pub async fn save(&self) -> ConfigurationResult<()> {
-        let home_directory = get_home_directory()?;
-        let configuration_directory = home_directory.join(CONFIGURATION_DIRECTORY_NAME);
+        let configuration_directory = get_configuration_base_path();
         let configuration_file_path = configuration_directory.join(CONFIGURATION_FILE_NAME);
 
-        let configuration_serialized = toml::to_string_pretty(&self).unwrap();
+        let configuration_serialized = toml::to_string_pretty(&self)
+            .map_err(|e| {
+                log::error!("Failed to serialize configuration: {}", e);
+                ConfigurationError::SerializeError(e)
+            })?;
 
         fs::write(configuration_file_path, configuration_serialized).await?;
 
@@ -301,34 +300,47 @@ impl Configuration {
 }
 
 async fn get_default_filters(
-    http_client: reqwest::Client,
+    _http_client: reqwest::Client,
 ) -> ConfigurationResult<Vec<DefaultFilter>> {
-    let base_filters_url = BASE_FILTERS_URL.parse::<Url>().unwrap();
-    let filters_url = base_filters_url.join(METADATA_FILE_NAME).unwrap();
+    // let base_filters_url = BASE_FILTERS_URL.parse::<Url>().unwrap();
+    // let filters_url = base_filters_url.join(METADATA_FILE_NAME).unwrap();
 
-    let response = http_client.get(filters_url.as_str()).send().await?;
+    // let response = http_client.get(filters_url.as_str()).send().await?;
 
-    let default_filters = response.json::<Vec<DefaultFilter>>().await?;
+    // let default_filters = response.json::<Vec<DefaultFilter>>().await?;
 
-    Ok(default_filters)
-}
+    // Ok(default_filters)
 
-fn get_home_directory() -> ConfigurationResult<PathBuf> {
-    match home_dir() {
-        Some(home_directory) => Ok(home_directory),
-        None => Err(ConfigurationError::HomeDirectoryNotFound),
-    }
+    Ok(vec![
+        DefaultFilter {
+            enabled_by_default: true,
+            file_name: "easylist.txt".to_string(),
+            group: "ads".to_string(),
+            title: "EasyList Official".to_string(),
+        }
+    ])
 }
 
 async fn get_filter(
     filter_file_name: &str,
     http_client: &reqwest::Client,
 ) -> ConfigurationResult<String> {
-    let base_filters_url = BASE_FILTERS_URL.parse::<Url>().unwrap();
-    let filter_url = base_filters_url.join(filter_file_name).unwrap();
+    // let base_filters_url = BASE_FILTERS_URL.parse::<Url>().unwrap();
+    // let filter_url = base_filters_url.join(filter_file_name).unwrap();
 
-    let response = http_client.get(filter_url.as_str()).send().await?;
+    // let response = http_client.get(filter_url.as_str()).send().await?;
 
+    // let filter = response.text().await?;
+
+    // Ok(filter)
+
+    let url = match filter_file_name {
+        "easylist.txt" => "https://easylist.to/easylist/easylist.txt",
+        _ => return Err(ConfigurationError::CertificateError("Unknown filter source".into())),
+    };
+
+    log::info!("Downloading filter from: {}", url);
+    let response = http_client.get(url).send().await?;
     let filter = response.text().await?;
 
     Ok(filter)

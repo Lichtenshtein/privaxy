@@ -10,12 +10,14 @@ members = ["app", "privaxy"]
 # have a built-in feature for this.
 # portable-atomic = { version = "1.10" }
 generational-box = { path = "patches/generational-box" }
+rustls = { git = "https://github.com/rustls/rustls.git", tag = "v/0.23.12" }
 
 [profile.release]
 opt-level = "z"     # Optimize for size
 lto = true          # Link Time Optimization
 codegen-units = 1   # Better optimization at the cost of build time
 panic = "immediate-abort"     # Removes stack unwinding code
+strip = true
 
 [profile.release.package.privaxy-app]
 codegen-units = 1
