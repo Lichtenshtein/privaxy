@@ -19,6 +19,10 @@
 
 ## About
 
+This main branch is a https://github.com/shadowbrok3r/privaxy fork with Dioxus Liveview and updated crates ported to mipsel with goal to launch it on MediaTek MT7620A CPU. The defualt hardcoded base filter URL (https://filters.privaxy.net) is broken, so online filter lists must be taken from somewhere else, and that part of code must be rewriten. Currently, filter lists - even own local ones - must be hardcoded before compilation.
+
+---
+
 Privaxy is a MITM HTTP(s) proxy that sits in between HTTP(s) talking applications, such as a web browser and HTTP servers, such as those serving websites.
 
 By establishing a two-way tunnel between both ends, Privaxy is able to block network requests based on URL patterns and to inject scripts as well as styles into HTML documents.
